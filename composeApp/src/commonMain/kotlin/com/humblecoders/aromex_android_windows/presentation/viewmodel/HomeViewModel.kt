@@ -3,6 +3,7 @@ package com.humblecoders.aromex_android_windows.presentation.viewmodel
 import com.humblecoders.aromex_android_windows.data.repository.FinancialRepository
 import com.humblecoders.aromex_android_windows.domain.model.AccountBalance
 import com.humblecoders.aromex_android_windows.domain.model.DebtOverview
+import com.humblecoders.aromex_android_windows.domain.model.Entity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +23,9 @@ class HomeViewModel(
     private val _accountBalance = MutableStateFlow<AccountBalance>(AccountBalance())
     val accountBalance: StateFlow<AccountBalance> = _accountBalance.asStateFlow()
     
+    private val _debtOverview = MutableStateFlow<DebtOverview>(DebtOverview())
+    val debtOverview: StateFlow<DebtOverview> = _debtOverview.asStateFlow()
+    
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     
@@ -30,6 +34,7 @@ class HomeViewModel(
     
     init {
         loadAccountBalance()
+        loadDebtOverview()
     }
     
     private fun loadAccountBalance() {
@@ -46,7 +51,17 @@ class HomeViewModel(
             .launchIn(viewModelScope)
     }
 
-    
+    private fun loadDebtOverview() {
+        financialRepository.getDebtOverview()
+            .onEach { overview ->
+                _debtOverview.value = overview
+            }
+            .catch { e ->
+                _error.value = e.message
+            }
+            .launchIn(viewModelScope)
+    }
+
     fun updateAccountBalance(accountBalance: AccountBalance) {
         financialRepository.updateAccountBalance(accountBalance)
             .onEach { result ->
@@ -68,5 +83,19 @@ class HomeViewModel(
             }
             .launchIn(viewModelScope)
     }
-}
 
+    fun addEntity(entity: Entity) {
+        _isLoading.value = true
+        financialRepository.addEntity(entity)
+            .onEach { result ->
+                result.fold(
+                    onSuccess = { _isLoading.value = false },
+                    onFailure = { e -> 
+                        _error.value = e.message
+                        _isLoading.value = false
+                    }
+                )
+            }
+            .launchIn(viewModelScope)
+    }
+}

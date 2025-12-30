@@ -4,6 +4,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.humblecoders.aromex_android_windows.domain.model.AccountBalance
 import com.humblecoders.aromex_android_windows.domain.model.DebtOverview
+import com.humblecoders.aromex_android_windows.domain.model.Entity
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -75,6 +76,39 @@ class FirestoreFinancialRepository(
         }
     }
     
+    override fun getDebtOverview(): Flow<com.humblecoders.aromex_android_windows.domain.model.DebtOverview> = callbackFlow {
+        var totalOwed = 0.0
+        var totalDueToMe = 0.0
+        val listener = firestore.collection("Entities")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(com.humblecoders.aromex_android_windows.domain.model.DebtOverview(
+                        totalOwed = totalOwed,
+                        totalDueToMe = totalDueToMe
+                    ))
+                    return@addSnapshotListener
+                }
+                totalOwed = 0.0
+                totalDueToMe = 0.0
+                if (snapshot != null && !snapshot.isEmpty) {
+                    snapshot.documents.forEach { document ->
+                        val amount = document.getDouble("initialBalance") ?: 0.0
+                        // Derive balanceType from initialBalance sign: negative = TO_GIVE, positive = TO_RECEIVE
+                        if (amount < 0) {
+                            totalOwed += kotlin.math.abs(amount)
+                        } else {
+                            totalDueToMe += amount
+                        }
+                    }
+                }
+                trySend(com.humblecoders.aromex_android_windows.domain.model.DebtOverview(
+                    totalOwed = totalOwed,
+                    totalDueToMe = totalDueToMe
+                ))
+            }
+        awaitClose { listener.remove() }
+    }
+    
     override fun updateAccountBalance(accountBalance: AccountBalance): Flow<Result<Unit>> = flow {
         try {
             val currentTime = System.currentTimeMillis()
@@ -126,6 +160,37 @@ class FirestoreFinancialRepository(
         } catch (e: Exception) {
             emit(Result.failure(e))
         }
+    }
+
+    override fun addEntity(entity: Entity): Flow<Result<Unit>> = flow {
+        try {
+            val updatedAt = formatTimestamp(System.currentTimeMillis())
+            val entityData = mapOf(
+                "type" to entity.type.name,
+                "name" to entity.name,
+                "phone" to entity.phone,
+                "email" to entity.email,
+                "address" to entity.address,
+                "notes" to entity.notes,
+                "initialBalance" to entity.initialBalance,
+                "updatedAt" to updatedAt
+            )
+            
+            firestore.collection("Entities")
+                .add(entityData)
+                .await()
+            
+            emit(Result.success(Unit))
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
+    }
+    
+    private fun formatTimestamp(timestamp: Long): String {
+        val dateFormat = java.text.SimpleDateFormat("MMMM dd, yyyy 'at' h:mm:ss a 'UTC'XXX", java.util.Locale.ENGLISH)
+        val formatted = dateFormat.format(java.util.Date(timestamp))
+        // Remove leading zero from timezone offset (e.g., +05:30 -> +5:30)
+        return formatted.replace("UTC+0", "UTC+").replace("UTC-0", "UTC-")
     }
 }
 

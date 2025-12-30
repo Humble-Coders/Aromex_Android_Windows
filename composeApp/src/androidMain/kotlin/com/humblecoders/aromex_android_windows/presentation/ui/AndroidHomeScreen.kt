@@ -1,5 +1,10 @@
 package com.humblecoders.aromex_android_windows.presentation.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -7,6 +12,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -15,10 +22,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel
+import com.humblecoders.aromex_android_windows.domain.model.EntityType
 import kotlinx.coroutines.launch
 
 @Composable
@@ -28,6 +38,29 @@ fun AndroidHomeScreen(
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    var showAddEntitySheet by remember { mutableStateOf(false) }
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+    var isSaving by remember { mutableStateOf(false) }
+    var lastSavedType by remember { mutableStateOf<EntityType?>(null) }
+    var showSuccess by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(isLoading, isSaving, error) {
+        if (isSaving && !isLoading) {
+            if (error == null) {
+                showSuccess = true
+            }
+            isSaving = false
+        }
+    }
+    LaunchedEffect(showSuccess) {
+        if (showSuccess) {
+            kotlinx.coroutines.delay(1200)
+            showAddEntitySheet = false
+            kotlinx.coroutines.delay(250)
+            showSuccess = false
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -44,11 +77,80 @@ fun AndroidHomeScreen(
         MainContent(
             viewModel = viewModel,
             onMenuClick = { scope.launch { drawerState.open() } },
+            onAddEntityClick = { showAddEntitySheet = true },
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF5F5F5))
                 .windowInsetsPadding(WindowInsets.systemBars)
         )
+        
+        if (showAddEntitySheet) {
+            AddEntitySheet(
+                onDismiss = { showAddEntitySheet = false },
+                onSave = { entity ->
+                    lastSavedType = entity.type
+                    isSaving = true
+                    viewModel.addEntity(entity)
+                }
+            )
+        }
+    }
+    
+    if (isSaving || showSuccess) {
+        val typeLabel = when (lastSavedType) {
+            EntityType.CUSTOMER -> "Customer"
+            EntityType.SUPPLIER -> "Supplier"
+            EntityType.MIDDLEMAN -> "Middleman"
+            null -> "Entity"
+        }
+        Dialog(onDismissRequest = {}) {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                AnimatedVisibility(
+                    visible = isSaving,
+                    enter = fadeIn() + scaleIn(),
+                    exit = fadeOut() + scaleOut()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 32.dp, vertical = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        CircularProgressIndicator()
+                        Text(
+                            text = "Saving $typeLabel...",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+                AnimatedVisibility(
+                    visible = showSuccess,
+                    enter = fadeIn() + scaleIn(),
+                    exit = fadeOut() + scaleOut()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 32.dp, vertical = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Color(0xFF4CAF50),
+                            modifier = Modifier.size(40.dp)
+                        )
+                        Text(
+                            text = "$typeLabel Added Successfully!",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -184,9 +286,11 @@ fun MenuItem(
 fun MainContent(
     viewModel: HomeViewModel,
     onMenuClick: () -> Unit,
+    onAddEntityClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val accountBalance by viewModel.accountBalance.collectAsState()
+    val debtOverview by viewModel.debtOverview.collectAsState()
     
     var showEditSheet by remember { mutableStateOf(false) }
     var editingBalanceType by remember { mutableStateOf<String?>(null) }
@@ -238,10 +342,10 @@ fun MainContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Debt Overview Card
-//        DebtOverviewCard(
-//            debtOverview = debtOverview,
-//            modifier = Modifier.fillMaxWidth()
-//        )
+        DebtOverviewCard(
+            debtOverview = debtOverview,
+            modifier = Modifier.fillMaxWidth()
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -256,7 +360,7 @@ fun MainContent(
         QuickActionButton(
             text = "Add Entity",
             icon = Icons.Default.PersonAdd,
-            onClick = { /* TODO */ },
+            onClick = onAddEntityClick,
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -360,11 +464,14 @@ fun BalanceItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onEditClick: () -> Unit
 ) {
+    val isNegative = amount < 0.0
+    val rowColor = if (isNegative) Color(0xFFFFEBEE) else Color(0xFFE8F5E9)
+    val accentColor = if (isNegative) Color(0xFFD32F2F) else Color(0xFF4CAF50)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFFE8F5E9))
+            .background(rowColor)
             .padding(12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -373,7 +480,7 @@ fun BalanceItem(
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = Color(0xFF4CAF50),
+                tint = accentColor,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
@@ -386,7 +493,8 @@ fun BalanceItem(
             Text(
                 text = "$${String.format("%.2f", amount)}",
                 fontSize = 15.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                color = accentColor
             )
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
@@ -427,7 +535,7 @@ fun DebtOverviewCard(
                     fontWeight = FontWeight.SemiBold
                 )
                 Icon(
-                    imageVector = Icons.Default.TrendingUp,
+                    imageVector = Icons.AutoMirrored.Filled.TrendingUp,
                     contentDescription = null,
                     tint = Color.Gray,
                     modifier = Modifier.size(20.dp)
@@ -529,7 +637,7 @@ fun QuickActionButton(
                 )
             }
             Icon(
-                imageVector = Icons.Default.ArrowForward,
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
                 tint = Color.Gray
             )
@@ -545,7 +653,7 @@ fun EditBalanceBottomSheet(
     onDismiss: () -> Unit,
     onSave: (Double) -> Unit
 ) {
-    var newAmountText by remember { mutableStateOf(currentAmount.toString()) }
+    var newAmount by remember { mutableStateOf(TextFieldValue(currentAmount.toString())) }
     val balanceTypeLabel = when (balanceType) {
         "bank" -> "Bank Balance"
         "cash" -> "Cash"
@@ -625,25 +733,69 @@ fun EditBalanceBottomSheet(
             
             // New Amount Section
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "New Amount",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
-                OutlinedTextField(
-                    value = newAmountText,
-                    onValueChange = { newAmountText = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    placeholder = { Text("Enter amount") },
-                    supportingText = {
-                        Text(
-                            text = "Enter the new amount for this account",
-                            fontSize = 12.sp,
-                            color = Color.Gray
-                        )
+            Text(
+                text = "New Amount",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+            OutlinedTextField(
+                value = newAmount,
+                onValueChange = { newValue ->
+                    val oldText = newAmount.text
+                    val oldSelection = newAmount.selection
+                    
+                    var filtered = newValue.text.filter { it.isDigit() || it == '.' || it == '-' }
+                    val decimalCount = filtered.count { it == '.' }
+                    if (decimalCount > 1) {
+                        val firstDecimalIndex = filtered.indexOf('.')
+                        filtered = filtered.substring(0, firstDecimalIndex + 1) +
+                                filtered.substring(firstDecimalIndex + 1).replace(".", "")
                     }
-                )
+                    
+                    if (balanceType == "creditCard") {
+                        val numericPart = filtered.replace("-", "")
+                        val (resultText, cursorPos) =
+                            if (numericPart.isEmpty() || numericPart == ".") {
+                                Pair(numericPart, newValue.selection.start.coerceIn(0, numericPart.length))
+                            } else {
+                                val finalText =
+                                    if (filtered.startsWith("-") &&
+                                        filtered.substring(1) == numericPart &&
+                                        numericPart.all { it.isDigit() || it == '.' }) {
+                                        filtered
+                                    } else {
+                                        "-$numericPart"
+                                    }
+                                val newCursor =
+                                    if (filtered.startsWith("-") && filtered == finalText) {
+                                        newValue.selection.start.coerceIn(0, finalText.length)
+                                    } else {
+                                        val cursorAdjustment =
+                                            if (!oldText.startsWith("-") && finalText.startsWith("-")) 1
+                                            else if (oldText.startsWith("-") && !finalText.startsWith("-")) -1
+                                            else 0
+                                        (newValue.selection.start + cursorAdjustment).coerceIn(0, finalText.length)
+                                    }
+                                Pair(finalText, newCursor)
+                            }
+                        newAmount = TextFieldValue(text = resultText, selection = androidx.compose.ui.text.TextRange(cursorPos))
+                    } else {
+                        val resultText = filtered
+                        val cursorPos = newValue.selection.start.coerceIn(0, resultText.length)
+                        newAmount = TextFieldValue(text = resultText, selection = androidx.compose.ui.text.TextRange(cursorPos))
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                placeholder = { Text("Enter amount") },
+                supportingText = {
+                    Text(
+                        text = "Enter the new amount for this account",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
+            )
             }
             
             // Action Buttons
@@ -659,7 +811,8 @@ fun EditBalanceBottomSheet(
                 }
                 Button(
                     onClick = {
-                        val amount = newAmountText.toDoubleOrNull() ?: return@Button
+                        val parsed = newAmount.text.toDoubleOrNull() ?: return@Button
+                        val amount = if (balanceType == "creditCard") -kotlin.math.abs(parsed) else parsed
                         onSave(amount)
                     },
                     modifier = Modifier.weight(1f),
