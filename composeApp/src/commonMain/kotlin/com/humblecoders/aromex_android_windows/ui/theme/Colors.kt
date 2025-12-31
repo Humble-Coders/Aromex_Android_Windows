@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 
 object AromexColors {
     // Primary Aromex Blue - used in sidebar
-    val PrimaryBlue = Color(0xFF1E3A5F)
+    val PrimaryBlue = Color(0xFF1E3A5F);
     
     // Selected menu item blue
     val SelectedBlue = Color(0xFF2E5A8F)
