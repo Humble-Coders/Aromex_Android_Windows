@@ -1,12 +1,11 @@
 package com.humblecoders.aromex_android_windows.presentation.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
+import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +20,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.animation.core.Animatable
+import kotlinx.coroutines.launch
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -28,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel
 import com.humblecoders.aromex_android_windows.domain.model.EntityType
+import com.humblecoders.aromex_android_windows.ui.theme.AromexColors
 
 @Composable
 fun WindowsHomeScreen(
@@ -41,10 +46,14 @@ fun WindowsHomeScreen(
     var isSaving by remember { mutableStateOf(false) }
     var lastSavedType by remember { mutableStateOf<EntityType?>(null) }
     var showSuccess by remember { mutableStateOf(false) }
-    
+
     LaunchedEffect(isLoading, isSaving, error) {
         if (isSaving && !isLoading) {
             if (error == null) {
+                // Close add entity dialog immediately when showing success
+                showAddEntityDialog = false
+                // Wait for exit animation to complete before showing success
+                kotlinx.coroutines.delay(300)
                 showSuccess = true
             }
             isSaving = false
@@ -52,13 +61,11 @@ fun WindowsHomeScreen(
     }
     LaunchedEffect(showSuccess) {
         if (showSuccess) {
-            kotlinx.coroutines.delay(1200)
-            showAddEntityDialog = false
-            kotlinx.coroutines.delay(250)
+            kotlinx.coroutines.delay(2500) // Show success dialog for 2.5 seconds
             showSuccess = false
         }
     }
-    
+
     Row(modifier = Modifier.fillMaxSize()) {
         // Sidebar
         Sidebar(
@@ -66,14 +73,14 @@ fun WindowsHomeScreen(
             onToggle = { sidebarExpanded = !sidebarExpanded },
             onNavigate = onNavigate
         )
-        
+
         // Main Content
         MainContent(
             viewModel = viewModel,
             onAddEntityClick = { showAddEntityDialog = true },
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF5F5F5))
+                .background(AromexColors.BackgroundGrey)
         )
     }
 
@@ -87,7 +94,7 @@ fun WindowsHomeScreen(
             }
         )
     }
-    
+
     if (isSaving || showSuccess) {
         val typeLabel = when (lastSavedType) {
             EntityType.CUSTOMER -> "Customer"
@@ -96,49 +103,81 @@ fun WindowsHomeScreen(
             null -> "Entity"
         }
         Dialog(onDismissRequest = {}) {
+            Box(contentAlignment = Alignment.Center) {
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = AromexColors.ForegroundWhite)
             ) {
-                AnimatedVisibility(
-                    visible = isSaving,
-                    enter = fadeIn() + scaleIn(),
-                    exit = fadeOut() + scaleOut()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 32.dp, vertical = 24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 32.dp, vertical = 24.dp)
+                            .defaultMinSize(minWidth = 200.dp, minHeight = 100.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator()
-                        Text(
-                            text = "Saving $typeLabel...",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-                AnimatedVisibility(
-                    visible = showSuccess,
-                    enter = fadeIn() + scaleIn(),
-                    exit = fadeOut() + scaleOut()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 32.dp, vertical = 24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            tint = Color(0xFF4CAF50),
-                            modifier = Modifier.size(40.dp)
-                        )
-                        Text(
-                            text = "$typeLabel Added Successfully!",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = isSaving,
+                            enter = fadeIn(
+                                animationSpec = tween(200, easing = FastOutSlowInEasing)
+                            ) + scaleIn(
+                                initialScale = 0.8f,
+                                animationSpec = tween(200, easing = FastOutSlowInEasing)
+                            ),
+                            exit = fadeOut(
+                                animationSpec = tween(200, easing = FastOutSlowInEasing)
+                            ) + scaleOut(
+                                targetScale = 0.8f,
+                                animationSpec = tween(200, easing = FastOutSlowInEasing)
+                            )
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                CircularProgressIndicator()
+                                Text(
+                                    text = "Saving $typeLabel...",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = AromexColors.TextDark
+                                )
+                            }
+                        }
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = showSuccess,
+                            enter = fadeIn(
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + scaleIn(
+                                initialScale = 0.8f,
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + slideInVertically(
+                                initialOffsetY = { it / 4 },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ),
+                            exit = fadeOut(
+                                animationSpec = tween(200, easing = FastOutSlowInEasing)
+                            ) + scaleOut(
+                                targetScale = 0.95f,
+                                animationSpec = tween(200, easing = FastOutSlowInEasing)
+                            )
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color(0xFF4CAF50),
+                                    modifier = Modifier.size(40.dp)
+                                )
+                                Text(
+                                    text = "$typeLabel Added Successfully!",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = AromexColors.TextDark
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -156,21 +195,21 @@ fun Sidebar(
         "Home" to Icons.Default.Home,
         "Transactions" to Icons.Default.SwapHoriz,
         "Purchase" to Icons.Default.ShoppingCart,
-        "Sales" to Icons.Default.TrendingUp,
+        "Sales" to Icons.AutoMirrored.Filled.TrendingUp,
         "Profiles" to Icons.Default.People,
         "Inventory" to Icons.Default.Inventory,
         "Balance Report" to Icons.Default.Assessment,
         "Histories" to Icons.Default.History,
         "Statistics" to Icons.Default.BarChart
     )
-    
+
     var selectedItem by remember { mutableStateOf("Home") }
-    
+
     Column(
         modifier = Modifier
             .width(if (expanded) 250.dp else 70.dp)
             .fillMaxHeight()
-            .background(Color(0xFF1E3A5F))
+            .background(AromexColors.PrimaryBlue)
             .padding(16.dp)
     ) {
         // Logo and Toggle
@@ -187,7 +226,11 @@ fun Sidebar(
                     fontWeight = FontWeight.Bold
                 )
             }
-            IconButton(onClick = onToggle) {
+            IconButton(
+                onClick = onToggle,
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                interactionSource = remember { MutableInteractionSource() }
+            ) {
                 Icon(
                     imageVector = if (expanded) Icons.Default.MenuOpen else Icons.Default.Menu,
                     contentDescription = "Toggle Menu",
@@ -195,9 +238,9 @@ fun Sidebar(
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.height(32.dp))
-        
+
         // Menu Items
         menuItems.forEach { (item, icon) ->
             MenuItem(
@@ -227,8 +270,13 @@ fun MenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(if (isSelected) Color(0xFF2E5A8F) else Color.Transparent)
-            .clickable(onClick = onClick)
+            .background(if (isSelected) AromexColors.SelectedBlue else Color.Transparent)
+            .clickable(
+                onClick = onClick,
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            )
+            .pointerHoverIcon(PointerIcon.Hand)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -257,11 +305,11 @@ fun MainContent(
 ) {
     val accountBalance by viewModel.accountBalance.collectAsState()
     val debtOverview by viewModel.debtOverview.collectAsState()
-    
+
     var showEditDialog by remember { mutableStateOf(false) }
     var editingBalanceType by remember { mutableStateOf<String?>(null) }
     var editingCurrentAmount by remember { mutableStateOf(0.0) }
-    
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -272,17 +320,19 @@ fun MainContent(
             text = "Home",
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
+            color = AromexColors.TextDark,
             modifier = Modifier.padding(bottom = 24.dp)
         )
-        
+
         // Financial Overview Section
         Text(
             text = "Financial Overview",
             fontSize = 20.sp,
             fontWeight = FontWeight.SemiBold,
+            color = AromexColors.TextDark,
             modifier = Modifier.padding(bottom = 16.dp)
         )
-        
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -297,24 +347,25 @@ fun MainContent(
                 },
                 modifier = Modifier.weight(1f)
             )
-            
+
             // Debt Overview Card
             DebtOverviewCard(
                 debtOverview = debtOverview,
                 modifier = Modifier.weight(1f)
             )
         }
-        
+
         Spacer(modifier = Modifier.height(32.dp))
-        
+
         // Quick Actions Section
         Text(
             text = "Quick Actions",
             fontSize = 20.sp,
             fontWeight = FontWeight.SemiBold,
+            color = AromexColors.TextDark,
             modifier = Modifier.padding(bottom = 16.dp)
         )
-        
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -339,7 +390,7 @@ fun MainContent(
             )
         }
     }
-    
+
     // Edit Balance Dialog
     if (showEditDialog && editingBalanceType != null) {
         EditBalanceDialog(
@@ -363,7 +414,8 @@ fun AccountBalancesCard(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = AromexColors.ForegroundWhite)
     ) {
         Column(
             modifier = Modifier
@@ -378,17 +430,18 @@ fun AccountBalancesCard(
                 Text(
                     text = "Account Balances",
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = AromexColors.TextDark
                 )
                 Icon(
                     imageVector = Icons.Default.CreditCard,
                     contentDescription = null,
-                    tint = Color.Gray
+                    tint = AromexColors.TextGrey
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             BalanceItem(
                 label = "Bank Balance",
                 amount = accountBalance.bankBalance,
@@ -442,7 +495,8 @@ fun BalanceItem(
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = label,
-                fontSize = 16.sp
+                fontSize = 16.sp,
+                color = AromexColors.TextDark
             )
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -456,10 +510,15 @@ fun BalanceItem(
             Icon(
                 imageVector = Icons.Default.Edit,
                 contentDescription = "Edit",
-                tint = Color.Gray,
+                tint = AromexColors.TextGrey,
                 modifier = Modifier
                     .size(18.dp)
-                    .clickable(onClick = onEditClick)
+                    .clickable(
+                        onClick = onEditClick,
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    )
+                    .pointerHoverIcon(PointerIcon.Hand)
             )
         }
     }
@@ -473,7 +532,8 @@ fun DebtOverviewCard(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = AromexColors.ForegroundWhite)
     ) {
         Column(
             modifier = Modifier
@@ -488,17 +548,18 @@ fun DebtOverviewCard(
                 Text(
                     text = "Debt Overview",
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = AromexColors.TextDark
                 )
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.TrendingUp,
-                    contentDescription = null,
-                    tint = Color.Gray
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                contentDescription = null,
+                tint = AromexColors.TextGrey
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             DebtItem(
                 label = "Total Owed",
                 amount = debtOverview.totalOwed,
@@ -537,7 +598,8 @@ fun DebtItem(
     ) {
         Text(
             text = label,
-            fontSize = 16.sp
+            fontSize = 16.sp,
+            color = AromexColors.TextDark
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -566,9 +628,15 @@ fun QuickActionButton(
 ) {
     Card(
         modifier = modifier
-            .clickable(onClick = onClick),
+            .clickable(
+                onClick = onClick,
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            )
+            .pointerHoverIcon(PointerIcon.Hand),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = AromexColors.ForegroundWhite)
     ) {
         Row(
             modifier = Modifier
@@ -588,13 +656,14 @@ fun QuickActionButton(
                 Text(
                     text = text,
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = AromexColors.TextDark
                 )
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
-                tint = Color.Gray
+                tint = AromexColors.TextGrey
             )
         }
     }
@@ -615,71 +684,114 @@ fun EditBalanceDialog(
         else -> balanceType
     }
     
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = null,
-                    tint = Color.Gray,
-                    modifier = Modifier.size(24.dp)
-                )
-                Text(
-                    text = "Edit $balanceTypeLabel",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
+    val slideOffset = remember { Animatable(-1000f) }
+    val alpha = remember { Animatable(0f) }
+    
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(10)
+        kotlinx.coroutines.coroutineScope {
+            launch {
+                slideOffset.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(
+                        durationMillis = 400,
+                        easing = FastOutSlowInEasing
+                    )
                 )
             }
-        },
-        text = {
+            launch {
+                alpha.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        durationMillis = 400,
+                        easing = FastOutSlowInEasing
+                    )
+                )
+            }
+        }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .width(500.dp)
+                .padding(16.dp)
+                .graphicsLayer {
+                    translationY = slideOffset.value
+                    this.alpha = alpha.value
+                },
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = AromexColors.ForegroundWhite)
+        ) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
+                // Title
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = null,
+                        tint = AromexColors.TextGrey,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "Edit $balanceTypeLabel",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AromexColors.TextDark
+                    )
+                }
+                
                 Text(
                     text = "Update your financial information",
                     fontSize = 14.sp,
-                    color = Color.Gray
+                    color = AromexColors.TextGrey
                 )
-                
+
                 // Current Amount Section
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = "Current Amount",
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        color = AromexColors.TextDark
                     )
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+                        colors = CardDefaults.cardColors(containerColor = AromexColors.BackgroundGrey)
                     ) {
                         Text(
                             text = "$${String.format("%.2f", currentAmount)}",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
+                            color = AromexColors.TextDark,
                             modifier = Modifier.padding(16.dp)
                         )
                     }
                 }
-                
+
                 // New Amount Section
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = "New Amount",
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        color = AromexColors.TextDark
                     )
                     OutlinedTextField(
                         value = newAmount,
                         onValueChange = { newValue ->
                             val oldText = newAmount.text
                             val oldSelection = newAmount.selection
-                            
+
                             var filtered = newValue.text.filter { it.isDigit() || it == '.' || it == '-' }
                             val decimalCount = filtered.count { it == '.' }
                             if (decimalCount > 1) {
@@ -687,7 +799,7 @@ fun EditBalanceDialog(
                                 filtered = filtered.substring(0, firstDecimalIndex + 1) +
                                         filtered.substring(firstDecimalIndex + 1).replace(".", "")
                             }
-                            
+
                             if (balanceType == "creditCard") {
                                 val numericPart = filtered.replace("-", "")
                                 val (resultText, cursorPos) =
@@ -723,41 +835,63 @@ fun EditBalanceDialog(
                         },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        placeholder = { Text("Enter amount") },
+                        placeholder = { Text("Enter amount", color = AromexColors.TextGrey) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = AromexColors.ForegroundWhite,
+                            unfocusedContainerColor = AromexColors.ForegroundWhite,
+                            focusedBorderColor = AromexColors.TextGrey,
+                            unfocusedBorderColor = AromexColors.TextGrey
+                        ),
                         supportingText = {
                             Text(
-                    text = "Enter the new amount for this account",
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-            }
-        )
+                                text = "Enter the new amount for this account",
+                                fontSize = 12.sp,
+                                color = AromexColors.TextGrey
+                            )
+                        }
+                    )
+                }
+                
+                // Action Buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .weight(1f)
+                            .pointerHoverIcon(PointerIcon.Hand),
+                        interactionSource = remember { MutableInteractionSource() },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = AromexColors.TextDark
+                        )
+                    ) {
+                        Text("Cancel", color = AromexColors.TextDark)
+                    }
+                    Button(
+                        onClick = {
+                            val parsed = newAmount.text.toDoubleOrNull() ?: return@Button
+                            val amount = if (balanceType == "creditCard") -kotlin.math.abs(parsed) else parsed
+                            onSave(amount)
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .pointerHoverIcon(PointerIcon.Hand),
+                        colors = ButtonDefaults.buttonColors(containerColor = AromexColors.ButtonBlue),
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Save Changes", color = Color.White)
+                    }
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val parsed = newAmount.text.toDoubleOrNull() ?: return@Button
-                    val amount = if (balanceType == "creditCard") -kotlin.math.abs(parsed) else parsed
-                    onSave(amount)
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A5F))
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Save Changes")
-            }
-        },
-        dismissButton = {
-            OutlinedButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
         }
-    )
+    }
 }

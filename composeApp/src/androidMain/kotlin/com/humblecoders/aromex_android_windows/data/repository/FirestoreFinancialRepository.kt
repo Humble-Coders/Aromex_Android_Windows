@@ -113,30 +113,31 @@ class FirestoreFinancialRepository(
         try {
             val currentTime = System.currentTimeMillis()
             
-            // Update each document separately
-            firestore.collection(accountBalanceCollection)
-                .document("bank")
-                .set(mapOf(
+            // Use transaction to ensure all updates succeed or fail together
+            firestore.runTransaction { transaction ->
+                val bankDocRef = firestore.collection(accountBalanceCollection)
+                    .document("bank")
+                transaction.set(bankDocRef, mapOf(
                     "amount" to accountBalance.bankBalance,
                     "updatedAt" to currentTime
                 ))
-                .await()
-            
-            firestore.collection(accountBalanceCollection)
-                .document("cash")
-                .set(mapOf(
+                
+                val cashDocRef = firestore.collection(accountBalanceCollection)
+                    .document("cash")
+                transaction.set(cashDocRef, mapOf(
                     "amount" to accountBalance.cash,
                     "updatedAt" to currentTime
                 ))
-                .await()
-            
-            firestore.collection(accountBalanceCollection)
-                .document("creditCard")
-                .set(mapOf(
+                
+                val creditCardDocRef = firestore.collection(accountBalanceCollection)
+                    .document("creditCard")
+                transaction.set(creditCardDocRef, mapOf(
                     "amount" to accountBalance.creditCard,
                     "updatedAt" to currentTime
                 ))
-                .await()
+                
+                null // Transaction function must return a value
+            }.await()
             
             emit(Result.success(Unit))
         } catch (e: Exception) {
@@ -148,13 +149,17 @@ class FirestoreFinancialRepository(
         try {
             val currentTime = System.currentTimeMillis()
             
-            firestore.collection(accountBalanceCollection)
-                .document(balanceType)
-                .set(mapOf(
+            // Use transaction for consistency and atomicity
+            firestore.runTransaction { transaction ->
+                val docRef = firestore.collection(accountBalanceCollection)
+                    .document(balanceType)
+                transaction.set(docRef, mapOf(
                     "amount" to amount,
                     "updatedAt" to currentTime
                 ))
-                .await()
+                
+                null // Transaction function must return a value
+            }.await()
             
             emit(Result.success(Unit))
         } catch (e: Exception) {
@@ -176,9 +181,13 @@ class FirestoreFinancialRepository(
                 "updatedAt" to updatedAt
             )
             
-            firestore.collection("Entities")
-                .add(entityData)
-                .await()
+            // Use transaction for atomicity
+            firestore.runTransaction { transaction ->
+                val docRef = firestore.collection("Entities").document()
+                transaction.set(docRef, entityData)
+                
+                null // Transaction function must return a value
+            }.await()
             
             emit(Result.success(Unit))
         } catch (e: Exception) {
