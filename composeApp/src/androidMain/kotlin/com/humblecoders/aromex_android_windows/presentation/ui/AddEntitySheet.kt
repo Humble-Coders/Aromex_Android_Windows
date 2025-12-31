@@ -1,7 +1,9 @@
 package com.humblecoders.aromex_android_windows.presentation.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.humblecoders.aromex_android_windows.domain.model.BalanceType
 import com.humblecoders.aromex_android_windows.domain.model.Entity
 import com.humblecoders.aromex_android_windows.domain.model.EntityType
+import com.humblecoders.aromex_android_windows.ui.theme.AromexColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,7 +46,7 @@ fun AddEntitySheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
+                .padding(horizontal = 32.dp)
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 32.dp)
         ) {
@@ -51,14 +54,14 @@ fun AddEntitySheet(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFFE3F2FD),
+                    color = AromexColors.LightBlue,
                     modifier = Modifier.size(40.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.PersonAdd,
                             contentDescription = null,
-                            tint = Color(0xFF1E88E5)
+                            tint = AromexColors.AccentBlue
                         )
                     }
                 }
@@ -66,7 +69,8 @@ fun AddEntitySheet(
                 Text(
                     text = "Add New Entity",
                     fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = AromexColors.TextDark
                 )
             }
             
@@ -75,7 +79,7 @@ fun AddEntitySheet(
             Text(
                 text = "Type",
                 fontSize = 14.sp,
-                color = Color.Gray,
+                color = AromexColors.TextGrey,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             TypeRadioSelector(
@@ -85,7 +89,7 @@ fun AddEntitySheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(text = "Name *", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(text = "Name *", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AromexColors.TextDark)
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = name,
@@ -96,14 +100,14 @@ fun AddEntitySheet(
                 textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFFAFAFA),
-                    unfocusedContainerColor = Color(0xFFFAFAFA)
+                    focusedContainerColor = AromexColors.BackgroundGrey,
+                    unfocusedContainerColor = AromexColors.BackgroundGrey
                 )
             )
             
             Spacer(modifier = Modifier.height(12.dp))
             
-            Text(text = "Phone", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(text = "Phone", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AromexColors.TextDark)
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = phone,
@@ -117,14 +121,14 @@ fun AddEntitySheet(
                 textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFFAFAFA),
-                    unfocusedContainerColor = Color(0xFFFAFAFA)
+                    focusedContainerColor = AromexColors.BackgroundGrey,
+                    unfocusedContainerColor = AromexColors.BackgroundGrey
                 )
             )
             
             Spacer(modifier = Modifier.height(12.dp))
             
-            Text(text = "Email", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(text = "Email", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AromexColors.TextDark)
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = email,
@@ -135,14 +139,14 @@ fun AddEntitySheet(
                 textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFFAFAFA),
-                    unfocusedContainerColor = Color(0xFFFAFAFA)
+                    focusedContainerColor = AromexColors.BackgroundGrey,
+                    unfocusedContainerColor = AromexColors.BackgroundGrey
                 )
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text(text = "Address", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(text = "Address", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AromexColors.TextDark)
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = address,
@@ -152,14 +156,14 @@ fun AddEntitySheet(
                 textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFFAFAFA),
-                    unfocusedContainerColor = Color(0xFFFAFAFA)
+                    focusedContainerColor = AromexColors.BackgroundGrey,
+                    unfocusedContainerColor = AromexColors.BackgroundGrey
                 )
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text(text = "Notes", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(text = "Notes", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AromexColors.TextDark)
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = notes,
@@ -170,8 +174,8 @@ fun AddEntitySheet(
                 textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFFAFAFA),
-                    unfocusedContainerColor = Color(0xFFFAFAFA)
+                    focusedContainerColor = AromexColors.BackgroundGrey,
+                    unfocusedContainerColor = AromexColors.BackgroundGrey
                 )
             )
 
@@ -180,7 +184,8 @@ fun AddEntitySheet(
             Text(
                 text = "Initial Balance",
                 fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = AromexColors.TextDark
             )
             Spacer(modifier = Modifier.height(8.dp))
             
@@ -348,7 +353,7 @@ fun AddEntitySheet(
                     modifier = Modifier.weight(1f).height(50.dp),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Cancel", color = Color.Black)
+                    Text("Cancel", color = AromexColors.TextDark)
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Button(
@@ -370,7 +375,7 @@ fun AddEntitySheet(
                     modifier = Modifier.weight(2f).height(50.dp),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF5C6BC0),
+                        containerColor = AromexColors.ButtonBlue,
                         disabledContainerColor = Color(0xFFCCCCCC)
                     )
                 ) {
@@ -387,27 +392,81 @@ private fun TypeRadioSelector(
     selected: EntityType,
     onSelect: (EntityType) -> Unit
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(
-                selected = selected == EntityType.CUSTOMER,
-                onClick = { onSelect(EntityType.CUSTOMER) }
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TypePill(
+            text = "Customer",
+            isSelected = selected == EntityType.CUSTOMER,
+            onClick = { onSelect(EntityType.CUSTOMER) }
+        )
+        TypePill(
+            text = "Supplier",
+            isSelected = selected == EntityType.SUPPLIER,
+            onClick = { onSelect(EntityType.SUPPLIER) }
+        )
+        TypePill(
+            text = "Middleman",
+            isSelected = selected == EntityType.MIDDLEMAN,
+            onClick = { onSelect(EntityType.MIDDLEMAN) }
+        )
+    }
+}
+
+@Composable
+private fun TypePill(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                if (isSelected) AromexColors.LightBlue else AromexColors.BackgroundGrey
             )
-            Text(text = "Customer")
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(
-                selected = selected == EntityType.SUPPLIER,
-                onClick = { onSelect(EntityType.SUPPLIER) }
+            .border(
+                width = 1.dp,
+                color = if (isSelected) AromexColors.AccentBlue else Color(0xFFE0E0E0),
+                shape = RoundedCornerShape(16.dp)
             )
-            Text(text = "Supplier")
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(
-                selected = selected == EntityType.MIDDLEMAN,
-                onClick = { onSelect(EntityType.MIDDLEMAN) }
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) { onClick() }
+            .padding(horizontal = 8.dp, vertical = 5.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // Checkmark icon in circular background
+            Box(
+                modifier = Modifier
+                    .size(16.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        if (isSelected) AromexColors.AccentBlue else AromexColors.ForegroundWhite
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(10.dp)
+                    )
+                }
+            }
+            Text(
+                text = text,
+                fontSize = 12.sp,
+                color = AromexColors.TextDark,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
             )
-            Text(text = "Middleman")
         }
     }
 }
@@ -421,7 +480,7 @@ private fun BalanceTypeSelector(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFFF5F5F5))
+            .background(AromexColors.BackgroundGrey)
             .padding(4.dp)
     ) {
         BalanceTypeOption(
@@ -436,7 +495,7 @@ private fun BalanceTypeSelector(
             isSelected = selected == BalanceType.TO_GIVE,
             onClick = { onSelect(BalanceType.TO_GIVE) },
             color = Color(0xFFE57373),
-             modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).padding(end = 12.dp)
         )
     }
 }
@@ -459,7 +518,7 @@ private fun BalanceTypeOption(
     ) {
         Text(
             text = text,
-            color = if (isSelected) Color.White else Color.Gray,
+            color = if (isSelected) Color.White else AromexColors.TextGrey,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             fontSize = 14.sp
         )

@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.humblecoders.aromex_android_windows.ui.theme.AromexColors
 import com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel
 import com.humblecoders.aromex_android_windows.domain.model.EntityType
 import kotlinx.coroutines.launch
@@ -80,7 +81,7 @@ fun AndroidHomeScreen(
             onAddEntityClick = { showAddEntitySheet = true },
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF5F5F5))
+                .background(AromexColors.BackgroundGrey)
                 .windowInsetsPadding(WindowInsets.systemBars)
         )
         
@@ -106,7 +107,7 @@ fun AndroidHomeScreen(
         Dialog(onDismissRequest = {}) {
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = AromexColors.ForegroundWhite)
             ) {
                 AnimatedVisibility(
                     visible = isSaving,
@@ -122,7 +123,8 @@ fun AndroidHomeScreen(
                         Text(
                             text = "Saving $typeLabel...",
                             fontSize = 18.sp,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            color = AromexColors.TextDark
                         )
                     }
                 }
@@ -145,7 +147,8 @@ fun AndroidHomeScreen(
                         Text(
                             text = "$typeLabel Added Successfully!",
                             fontSize = 18.sp,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            color = AromexColors.TextDark
                         )
                     }
                 }
@@ -178,7 +181,7 @@ fun DrawerContent(
         modifier = Modifier
             .fillMaxHeight()
             .width(280.dp)
-            .background(Color(0xFF1E3A5F))
+            .background(AromexColors.PrimaryBlue)
             .windowInsetsPadding(WindowInsets.systemBars)
             .padding(16.dp)
     ) {
@@ -243,7 +246,7 @@ fun MenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(if (isSelected) Color(0xFF2E5A8F) else Color.Transparent)
+            .background(if (isSelected) AromexColors.SelectedBlue else Color.Transparent)
             .clickable(onClick = onClick, enabled = !isLocked)
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -315,13 +318,14 @@ fun MainContent(
                 Icon(
                     imageVector = Icons.Default.Menu,
                     contentDescription = "Menu",
-                    tint = Color.Black
+                    tint = AromexColors.TextDark
                 )
             }
             Text(
                 text = "Home",
                 fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = AromexColors.TextDark
             )
             Spacer(modifier = Modifier.width(48.dp))
         }
@@ -354,6 +358,7 @@ fun MainContent(
             text = "Quick Actions",
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold,
+            color = AromexColors.TextDark,
             modifier = Modifier.padding(bottom = 12.dp)
         )
 
@@ -406,7 +411,8 @@ fun AccountBalancesCard(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = AromexColors.ForegroundWhite)
     ) {
         Column(
             modifier = Modifier
@@ -421,12 +427,13 @@ fun AccountBalancesCard(
                 Text(
                     text = "Account Balances",
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = AromexColors.TextDark
                 )
                 Icon(
                     imageVector = Icons.Default.CreditCard,
                     contentDescription = null,
-                    tint = Color.Gray,
+                    tint = AromexColors.TextGrey,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -486,7 +493,8 @@ fun BalanceItem(
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = label,
-                fontSize = 15.sp
+                fontSize = 15.sp,
+                color = AromexColors.TextDark
             )
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -500,7 +508,7 @@ fun BalanceItem(
             Icon(
                 imageVector = Icons.Default.Edit,
                 contentDescription = "Edit",
-                tint = Color.Gray,
+                tint = AromexColors.TextGrey,
                 modifier = Modifier
                     .size(16.dp)
                     .clickable(onClick = onEditClick)
@@ -517,7 +525,8 @@ fun DebtOverviewCard(
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = AromexColors.ForegroundWhite)
     ) {
         Column(
             modifier = Modifier
@@ -532,12 +541,13 @@ fun DebtOverviewCard(
                 Text(
                     text = "Debt Overview",
                     fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = AromexColors.TextDark
                 )
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.TrendingUp,
                     contentDescription = null,
-                    tint = Color.Gray,
+                    tint = AromexColors.TextGrey,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -582,7 +592,8 @@ fun DebtItem(
     ) {
         Text(
             text = label,
-            fontSize = 15.sp
+            fontSize = 15.sp,
+            color = AromexColors.TextDark
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -613,7 +624,8 @@ fun QuickActionButton(
         modifier = modifier
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = AromexColors.ForegroundWhite)
     ) {
         Row(
             modifier = Modifier
@@ -633,13 +645,14 @@ fun QuickActionButton(
                 Text(
                     text = text,
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = AromexColors.TextDark
                 )
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
-                tint = Color.Gray
+                tint = AromexColors.TextGrey
             )
         }
     }
@@ -663,7 +676,7 @@ fun EditBalanceBottomSheet(
     
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Color.White
+        containerColor = AromexColors.ForegroundWhite
     ) {
         Column(
             modifier = Modifier
@@ -685,19 +698,20 @@ fun EditBalanceBottomSheet(
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = null,
-                        tint = Color.Gray,
+                        tint = AromexColors.TextGrey,
                         modifier = Modifier.size(24.dp)
                     )
                     Column {
                         Text(
                             text = "Edit $balanceTypeLabel",
                             fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = AromexColors.TextDark
                         )
                         Text(
                             text = "Update your financial information",
                             fontSize = 14.sp,
-                            color = Color.Gray
+                            color = AromexColors.TextGrey
                         )
                     }
                 }
@@ -705,7 +719,7 @@ fun EditBalanceBottomSheet(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close",
-                        tint = Color.Gray
+                        tint = AromexColors.TextGrey
                     )
                 }
             }
@@ -715,17 +729,19 @@ fun EditBalanceBottomSheet(
                 Text(
                     text = "Current Amount",
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = AromexColors.TextDark
                 )
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+                    colors = CardDefaults.cardColors(containerColor = AromexColors.BackgroundGrey)
                 ) {
                     Text(
                         text = "$${String.format("%.2f", currentAmount)}",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
+                        color = AromexColors.TextDark,
                         modifier = Modifier.padding(16.dp)
                     )
                 }
@@ -736,7 +752,8 @@ fun EditBalanceBottomSheet(
             Text(
                 text = "New Amount",
                 fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                color = AromexColors.TextDark
             )
             OutlinedTextField(
                 value = newAmount,
@@ -787,12 +804,18 @@ fun EditBalanceBottomSheet(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                placeholder = { Text("Enter amount") },
+                placeholder = { Text("Enter amount", color = AromexColors.TextGrey) },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = AromexColors.ForegroundWhite,
+                    unfocusedContainerColor = AromexColors.ForegroundWhite,
+                    focusedBorderColor = AromexColors.TextGrey,
+                    unfocusedBorderColor = AromexColors.TextGrey
+                ),
                 supportingText = {
                     Text(
                         text = "Enter the new amount for this account",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = AromexColors.TextGrey
                     )
                 }
             )
@@ -805,9 +828,12 @@ fun EditBalanceBottomSheet(
             ) {
                 OutlinedButton(
                     onClick = onDismiss,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = AromexColors.TextDark
+                    )
                 ) {
-                    Text("Cancel")
+                    Text("Cancel", color = AromexColors.TextDark)
                 }
                 Button(
                     onClick = {
@@ -816,7 +842,7 @@ fun EditBalanceBottomSheet(
                         onSave(amount)
                     },
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A5F))
+                    colors = ButtonDefaults.buttonColors(containerColor = AromexColors.ButtonBlue)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Check,
@@ -825,7 +851,7 @@ fun EditBalanceBottomSheet(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Save Changes")
+                    Text("Save Changes", color = Color.White)
                 }
             }
             

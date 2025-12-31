@@ -1,7 +1,12 @@
 package com.humblecoders.aromex_android_windows.presentation.ui
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -15,7 +20,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import kotlinx.coroutines.launch
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
@@ -25,6 +39,7 @@ import androidx.compose.ui.window.Dialog
 import com.humblecoders.aromex_android_windows.domain.model.BalanceType
 import com.humblecoders.aromex_android_windows.domain.model.Entity
 import com.humblecoders.aromex_android_windows.domain.model.EntityType
+import com.humblecoders.aromex_android_windows.ui.theme.AromexColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,19 +56,52 @@ fun AddEntityDialog(
     var initialBalance by remember { mutableStateOf(TextFieldValue("")) }
     var balanceType by remember { mutableStateOf(BalanceType.TO_RECEIVE) }
 
-    Dialog(onDismissRequest = {}) {
+    val nameFieldFocusRequester = remember { FocusRequester() }
+    
+    val slideOffset = remember { Animatable(-1000f) }
+    val alpha = remember { Animatable(0f) }
+    
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(10)
+        kotlinx.coroutines.coroutineScope {
+            launch {
+                slideOffset.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(
+                        durationMillis = 400,
+                        easing = FastOutSlowInEasing
+                    )
+                )
+            }
+            launch {
+                alpha.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        durationMillis = 400,
+                        easing = FastOutSlowInEasing
+                    )
+                )
+            }
+        }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
                 .width(800.dp)
-                .padding(16.dp),
+                .padding(16.dp)
+                .graphicsLayer {
+                    translationY = slideOffset.value
+                    this.alpha = alpha.value
+                },
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = AromexColors.ForegroundWhite)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
+                    .padding(horizontal = 32.dp, vertical = 16.dp)
             ) {
                 // Header
                 Row(
@@ -64,14 +112,14 @@ fun AddEntityDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFFE3F2FD),
+                            color = AromexColors.LightBlue,
                             modifier = Modifier.size(40.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = Icons.Default.PersonAdd,
                                     contentDescription = null,
-                                    tint = Color(0xFF1E88E5)
+                                    tint = AromexColors.AccentBlue
                                 )
                             }
                         }
@@ -80,7 +128,8 @@ fun AddEntityDialog(
                             Text(
                                 text = "Add New Entity",
                                 fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                color = AromexColors.TextDark
                             )
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -89,7 +138,7 @@ fun AddEntityDialog(
                                 Text(
                                     text = "Type:",
                                     fontSize = 15.sp,
-                                    color = Color.Gray
+                                    color = AromexColors.TextGrey
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 TypeRadioSelector(
@@ -99,12 +148,21 @@ fun AddEntityDialog(
                             }
                         }
                     }
-                    IconButton(onClick = onDismiss) {
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) {
                         Icon(Icons.Default.Close, contentDescription = "Close")
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // Auto-focus the name field when dialog appears
+                LaunchedEffect(Unit) {
+                    nameFieldFocusRequester.requestFocus()
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -120,14 +178,26 @@ fun AddEntityDialog(
                             value = name,
                             onValueChange = { name = it },
                             label = { Text("Enter name") },
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 36.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 36.dp)
+                                .focusRequester(nameFieldFocusRequester),
                             singleLine = true,
                             textStyle = LocalTextStyle.current.copy(fontSize = 15.sp),
                             shape = RoundedCornerShape(10.dp),
-//                            colors = OutlinedTextFieldDefaults.colors(
-//                                focusedContainerColor = Color(0xFFFAFAFA),
-//                                unfocusedContainerColor = Color(0xFFFAFAFA)
-//                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = AromexColors.BackgroundGrey,
+                                unfocusedContainerColor = AromexColors.BackgroundGrey,
+                                errorContainerColor = AromexColors.BackgroundGrey,
+                                focusedBorderColor = AromexColors.TextGrey,
+                                unfocusedBorderColor = AromexColors.TextGrey,
+                                focusedTextColor = AromexColors.TextDark,
+                                errorBorderColor = AromexColors.TextGrey,
+                                errorLabelColor = AromexColors.TextGrey,
+                                errorPlaceholderColor = AromexColors.TextGrey,
+                                errorTextColor = AromexColors.TextDark,
+                                errorCursorColor = AromexColors.TextDark
+                            ),
                             isError = name.isBlank()
                         )
                     }
@@ -146,8 +216,10 @@ fun AddEntityDialog(
                             textStyle = LocalTextStyle.current.copy(fontSize = 15.sp),
                             shape = RoundedCornerShape(10.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color(0xFFFAFAFA),
-                                unfocusedContainerColor = Color(0xFFFAFAFA)
+                                focusedContainerColor = AromexColors.BackgroundGrey,
+                                unfocusedContainerColor = AromexColors.BackgroundGrey,
+                                focusedBorderColor = AromexColors.TextGrey,
+                                unfocusedBorderColor = AromexColors.TextGrey
                             )
                         )
                     }
@@ -163,8 +235,10 @@ fun AddEntityDialog(
                             textStyle = LocalTextStyle.current.copy(fontSize = 15.sp),
                             shape = RoundedCornerShape(10.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color(0xFFFAFAFA),
-                                unfocusedContainerColor = Color(0xFFFAFAFA)
+                                focusedContainerColor = AromexColors.BackgroundGrey,
+                                unfocusedContainerColor = AromexColors.BackgroundGrey,
+                                focusedBorderColor = AromexColors.TextGrey,
+                                unfocusedBorderColor = AromexColors.TextGrey
                             )
                         )
                     }
@@ -182,8 +256,10 @@ fun AddEntityDialog(
                     textStyle = LocalTextStyle.current.copy(fontSize = 15.sp),
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFFFAFAFA),
-                        unfocusedContainerColor = Color(0xFFFAFAFA)
+                        focusedContainerColor = AromexColors.BackgroundGrey,
+                        unfocusedContainerColor = AromexColors.BackgroundGrey,
+                        focusedBorderColor = AromexColors.TextGrey,
+                        unfocusedBorderColor = AromexColors.TextGrey
                     )
                 )
 
@@ -200,8 +276,10 @@ fun AddEntityDialog(
                     textStyle = LocalTextStyle.current.copy(fontSize = 15.sp),
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFFFAFAFA),
-                        unfocusedContainerColor = Color(0xFFFAFAFA)
+                        focusedContainerColor = AromexColors.BackgroundGrey,
+                        unfocusedContainerColor = AromexColors.BackgroundGrey,
+                        focusedBorderColor = AromexColors.TextGrey,
+                        unfocusedBorderColor = AromexColors.TextGrey
                     )
                 )
 
@@ -213,24 +291,24 @@ fun AddEntityDialog(
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 OutlinedTextField(
                     value = initialBalance,
                     onValueChange = { newValue ->
                         val oldText = initialBalance.text
                         val oldSelection = initialBalance.selection
-                        
+
                         // Filter to allow only digits, decimal point, and negative sign
                         var filtered = newValue.text.filter { it.isDigit() || it == '.' || it == '-' }
-                        
+
                         // Ensure only one decimal point
                         val decimalCount = filtered.count { it == '.' }
                         if (decimalCount > 1) {
                             val firstDecimalIndex = filtered.indexOf('.')
-                            filtered = filtered.substring(0, firstDecimalIndex + 1) + 
+                            filtered = filtered.substring(0, firstDecimalIndex + 1) +
                                       filtered.substring(firstDecimalIndex + 1).replace(".", "")
                         }
-                        
+
                         // Apply balance type logic and calculate cursor position
                         val (resultText, cursorOffset) = when (balanceType) {
                             BalanceType.TO_RECEIVE -> {
@@ -244,12 +322,12 @@ fun AddEntityDialog(
                             BalanceType.TO_GIVE -> {
                                 // Extract numeric part (digits and decimal point)
                                 val numericPart = filtered.replace("-", "")
-                                
+
                                 if (numericPart.isEmpty() || numericPart == ".") {
                                     Pair(numericPart, newValue.selection.start.coerceIn(0, numericPart.length))
                                 } else {
                                     // For TO_GIVE, we need negative sign
-                                    val finalText = if (filtered.startsWith("-") && 
+                                    val finalText = if (filtered.startsWith("-") &&
                                         filtered.substring(1) == numericPart &&
                                         numericPart.all { it.isDigit() || it == '.' }) {
                                         // Value is already in correct format - use it directly to preserve cursor
@@ -258,7 +336,7 @@ fun AddEntityDialog(
                                         // Need to ensure negative sign is at the start
                                         "-$numericPart"
                                     }
-                                    
+
                                     // Calculate cursor position
                                     val newCursor = if (filtered.startsWith("-") && filtered == finalText) {
                                         // Value was already correct, preserve cursor position from newValue
@@ -275,12 +353,12 @@ fun AddEntityDialog(
                                         }
                                         (newValue.selection.start + cursorAdjustment).coerceIn(0, finalText.length)
                                     }
-                                    
+
                                     Pair(finalText, newCursor)
                                 }
                             }
                         }
-                        
+
                         initialBalance = TextFieldValue(
                             text = resultText,
                             selection = TextRange(cursorOffset)
@@ -292,8 +370,10 @@ fun AddEntityDialog(
                     textStyle = LocalTextStyle.current.copy(fontSize = 15.sp),
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFFFAFAFA),
-                        unfocusedContainerColor = Color(0xFFFAFAFA)
+                        focusedContainerColor = AromexColors.BackgroundGrey,
+                        unfocusedContainerColor = AromexColors.BackgroundGrey,
+                        focusedBorderColor = AromexColors.TextGrey,
+                        unfocusedBorderColor = AromexColors.TextGrey
                     ),
                     trailingIcon = {
                         Row(
@@ -305,8 +385,11 @@ fun AddEntityDialog(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(if (balanceType == BalanceType.TO_RECEIVE) Color(0xFF4CAF50) else Color(0xFFF5F5F5))
-                                    .clickable {
+                                    .background(if (balanceType == BalanceType.TO_RECEIVE) Color(0xFF4CAF50) else AromexColors.BackgroundGrey)
+                                    .clickable(
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() }
+                                    ) {
                                         balanceType = BalanceType.TO_RECEIVE
                                         // Adjust sign when balance type changes
                                         val currentText = initialBalance.text
@@ -320,13 +403,14 @@ fun AddEntityDialog(
                                             )
                                         }
                                     }
+                                    .pointerHoverIcon(PointerIcon.Hand)
                                     .height(28.dp)
                                     .padding(horizontal = 12.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "To Receive",
-                                    color = if (balanceType == BalanceType.TO_RECEIVE) Color.White else Color.Gray,
+                                    color = if (balanceType == BalanceType.TO_RECEIVE) Color.White else AromexColors.TextGrey,
                                     fontWeight = if (balanceType == BalanceType.TO_RECEIVE) FontWeight.Bold else FontWeight.Normal,
                                     fontSize = 12.sp
                                 )
@@ -334,9 +418,13 @@ fun AddEntityDialog(
                             // To Give button
                             Box(
                                 modifier = Modifier
+                                    .padding(end = 12.dp)
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(if (balanceType == BalanceType.TO_GIVE) Color(0xFFE57373) else Color(0xFFF5F5F5))
-                                    .clickable {
+                                    .background(if (balanceType == BalanceType.TO_GIVE) Color(0xFFE57373) else AromexColors.BackgroundGrey)
+                                    .clickable(
+                                        indication = null,
+                                        interactionSource = remember { MutableInteractionSource() }
+                                    ) {
                                         balanceType = BalanceType.TO_GIVE
                                         // Adjust sign when balance type changes
                                         val currentText = initialBalance.text
@@ -355,13 +443,14 @@ fun AddEntityDialog(
                                             )
                                         }
                                     }
+                                    .pointerHoverIcon(PointerIcon.Hand)
                                     .height(28.dp)
                                     .padding(horizontal = 12.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "To Give",
-                                    color = if (balanceType == BalanceType.TO_GIVE) Color.White else Color.Gray,
+                                    color = if (balanceType == BalanceType.TO_GIVE) Color.White else AromexColors.TextGrey,
                                     fontWeight = if (balanceType == BalanceType.TO_GIVE) FontWeight.Bold else FontWeight.Normal,
                                     fontSize = 12.sp
                                 )
@@ -369,7 +458,7 @@ fun AddEntityDialog(
                         }
                     }
                 )
-                
+
                 // Watch for balance type changes and adjust initial balance
                 LaunchedEffect(balanceType) {
                     val currentText = initialBalance.text
@@ -411,10 +500,14 @@ fun AddEntityDialog(
                 ) {
                     OutlinedButton(
                         onClick = onDismiss,
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        shape = RoundedCornerShape(8.dp)
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp)
+                            .pointerHoverIcon(PointerIcon.Hand),
+                        shape = RoundedCornerShape(8.dp),
+                        interactionSource = remember { MutableInteractionSource() }
                     ) {
-                        Text("Cancel", color = Color.Black)
+                        Text("Cancel", color = AromexColors.TextDark)
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Button(
@@ -435,12 +528,16 @@ fun AddEntityDialog(
                             }
                         },
                         enabled = name.isNotBlank(),
-                        modifier = Modifier.weight(2f).height(50.dp),
+                        modifier = Modifier
+                            .weight(2f)
+                            .height(50.dp)
+                            .pointerHoverIcon(PointerIcon.Hand),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF5C6BC0),
+                            containerColor = AromexColors.ButtonBlue,
                             disabledContainerColor = Color(0xFFCCCCCC)
-                        )
+                        ),
+                        interactionSource = remember { MutableInteractionSource() }
                     ) {
                         Text("Save ${selectedType.name.lowercase().capitalize()}")
                     }
@@ -456,45 +553,82 @@ fun TypeRadioSelector(
     selected: EntityType,
     onSelect: (EntityType) -> Unit
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TypePill(
+            text = "Customer",
+            isSelected = selected == EntityType.CUSTOMER,
+            onClick = { onSelect(EntityType.CUSTOMER) }
+        )
+        TypePill(
+            text = "Supplier",
+            isSelected = selected == EntityType.SUPPLIER,
+            onClick = { onSelect(EntityType.SUPPLIER) }
+        )
+        TypePill(
+            text = "Middleman",
+            isSelected = selected == EntityType.MIDDLEMAN,
+            onClick = { onSelect(EntityType.MIDDLEMAN) }
+        )
+    }
+}
+
+@Composable
+fun TypePill(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                if (isSelected) AromexColors.LightBlue else AromexColors.BackgroundGrey
+            )
+            .border(
+                width = 1.dp,
+                color = if (isSelected) AromexColors.AccentBlue else Color(0xFFE0E0E0),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) { onClick() }
+            .pointerHoverIcon(PointerIcon.Hand)
+            .padding(horizontal = 8.dp, vertical = 5.dp),
+        contentAlignment = Alignment.Center
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.clickable(
-                indication = null,
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-            ) { onSelect(EntityType.CUSTOMER) }
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            RadioButton(
-                selected = selected == EntityType.CUSTOMER,
-                onClick = { onSelect(EntityType.CUSTOMER) }
+            // Checkmark icon in circular background
+            Box(
+                modifier = Modifier
+                    .size(16.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        if (isSelected) AromexColors.AccentBlue else AromexColors.ForegroundWhite
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(10.dp)
+                    )
+                }
+            }
+            Text(
+                text = text,
+                fontSize = 12.sp,
+                color = AromexColors.TextDark,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
             )
-            Text(text = "Customer")
-        }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.clickable(
-                indication = null,
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-            ) { onSelect(EntityType.SUPPLIER) }
-        ) {
-            RadioButton(
-                selected = selected == EntityType.SUPPLIER,
-                onClick = { onSelect(EntityType.SUPPLIER) }
-            )
-            Text(text = "Supplier")
-        }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.clickable(
-                indication = null,
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-            ) { onSelect(EntityType.MIDDLEMAN) }
-        ) {
-            RadioButton(
-                selected = selected == EntityType.MIDDLEMAN,
-                onClick = { onSelect(EntityType.MIDDLEMAN) }
-            )
-            Text(text = "Middleman")
         }
     }
 }
@@ -507,7 +641,7 @@ fun BalanceTypeSelector(
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFFF5F5F5))
+            .background(AromexColors.BackgroundGrey)
             .padding(4.dp)
     ) {
         BalanceTypeOption(
@@ -542,7 +676,7 @@ fun BalanceTypeOption(
     ) {
         Text(
             text = text,
-            color = if (isSelected) Color.White else Color.Gray,
+            color = if (isSelected) Color.White else AromexColors.TextGrey,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             fontSize = 14.sp
         )

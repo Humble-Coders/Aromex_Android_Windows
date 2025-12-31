@@ -4,6 +4,7 @@ import com.google.cloud.firestore.DocumentReference
 import com.google.cloud.firestore.EventListener
 import com.google.cloud.firestore.Firestore
 import com.google.cloud.firestore.QuerySnapshot
+import com.google.cloud.firestore.Transaction
 import com.humblecoders.aromex_android_windows.domain.model.AccountBalance
 import com.humblecoders.aromex_android_windows.domain.model.Entity
 import com.humblecoders.aromex_android_windows.domain.model.DebtOverview
@@ -109,33 +110,34 @@ class FirestoreFinancialRepository(
             try {
                 val currentTime = System.currentTimeMillis()
                 
-                // Update each document separately
-                val bankDocRef: DocumentReference = firestore.collection(accountBalanceCollection)
-                    .document("bank")
-                val bankData: Map<String, Any> = mapOf(
-                    "amount" to accountBalance.bankBalance,
-                    "updatedAt" to currentTime
-                )
-                val bankFuture = bankDocRef.set(bankData)
-                bankFuture.get()
-                
-                val cashDocRef: DocumentReference = firestore.collection(accountBalanceCollection)
-                    .document("cash")
-                val cashData: Map<String, Any> = mapOf(
-                    "amount" to accountBalance.cash,
-                    "updatedAt" to currentTime
-                )
-                val cashFuture = cashDocRef.set(cashData)
-                cashFuture.get()
-                
-                val creditCardDocRef: DocumentReference = firestore.collection(accountBalanceCollection)
-                    .document("creditCard")
-                val creditCardData: Map<String, Any> = mapOf(
-                    "amount" to accountBalance.creditCard,
-                    "updatedAt" to currentTime
-                )
-                val creditCardFuture = creditCardDocRef.set(creditCardData)
-                creditCardFuture.get()
+                // Use transaction to ensure all updates succeed or fail together
+                firestore.runTransaction { transaction: Transaction ->
+                    val bankDocRef: DocumentReference = firestore.collection(accountBalanceCollection)
+                        .document("bank")
+                    val bankData: Map<String, Any> = mapOf(
+                        "amount" to accountBalance.bankBalance,
+                        "updatedAt" to currentTime
+                    )
+                    transaction.set(bankDocRef, bankData)
+                    
+                    val cashDocRef: DocumentReference = firestore.collection(accountBalanceCollection)
+                        .document("cash")
+                    val cashData: Map<String, Any> = mapOf(
+                        "amount" to accountBalance.cash,
+                        "updatedAt" to currentTime
+                    )
+                    transaction.set(cashDocRef, cashData)
+                    
+                    val creditCardDocRef: DocumentReference = firestore.collection(accountBalanceCollection)
+                        .document("creditCard")
+                    val creditCardData: Map<String, Any> = mapOf(
+                        "amount" to accountBalance.creditCard,
+                        "updatedAt" to currentTime
+                    )
+                    transaction.set(creditCardDocRef, creditCardData)
+                    
+                    null // Transaction function must return a value
+                }.get()
                 
                 Result.success(Unit)
             } catch (e: Exception) {
@@ -151,16 +153,20 @@ class FirestoreFinancialRepository(
             try {
                 val currentTime = System.currentTimeMillis()
                 
-                val docRef: DocumentReference = firestore.collection(accountBalanceCollection)
-                    .document(balanceType)
+                // Use transaction for consistency and atomicity
+                firestore.runTransaction { transaction: Transaction ->
+                    val docRef: DocumentReference = firestore.collection(accountBalanceCollection)
+                        .document(balanceType)
+                    
+                    val data: Map<String, Any> = mapOf(
+                        "amount" to amount,
+                        "updatedAt" to currentTime
+                    )
+                    transaction.set(docRef, data)
+                    
+                    null // Transaction function must return a value
+                }.get()
                 
-                val data: Map<String, Any> = mapOf(
-                    "amount" to amount,
-                    "updatedAt" to currentTime
-                )
-                val future = docRef.set(data)
-                
-                future.get()
                 Result.success(Unit)
             } catch (e: Exception) {
                 println("Error updating single balance: ${e.message}")
@@ -173,7 +179,6 @@ class FirestoreFinancialRepository(
     override fun addEntity(entity: Entity): Flow<Result<Unit>> = flow {
         val result = withContext(Dispatchers.IO) {
             try {
-                val docRef = firestore.collection("Entities").document()
                 val updatedAt = formatTimestamp(System.currentTimeMillis())
                 val entityData = mapOf(
                     "type" to entity.type.name,
@@ -185,8 +190,15 @@ class FirestoreFinancialRepository(
                     "initialBalance" to entity.initialBalance,
                     "updatedAt" to updatedAt
                 )
-                val future = docRef.set(entityData)
-                future.get()
+                
+                // Use transaction for atomicity
+                firestore.runTransaction { transaction: Transaction ->
+                    val docRef = firestore.collection("Entities").document()
+                    transaction.set(docRef, entityData)
+                    
+                    null // Transaction function must return a value
+                }.get()
+                
                 Result.success(Unit)
             } catch (e: Exception) {
                 println("Error adding entity: ${e.message}")
