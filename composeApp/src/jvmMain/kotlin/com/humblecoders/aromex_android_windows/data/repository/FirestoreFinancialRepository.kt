@@ -84,8 +84,8 @@ class FirestoreFinancialRepository(
                 if (snapshot != null) {
                     snapshot.documents.forEach { document ->
                         val data = document.data
-                        val amount = (data?.get("initialBalance") as? Number)?.toDouble() ?: 0.0
-                        // Derive balanceType from initialBalance sign: negative = TO_GIVE, positive = TO_RECEIVE
+                        val amount = (data?.get("balance") as? Number)?.toDouble() ?: 0.0
+                        // Derive balanceType from balance sign: negative = TO_GIVE, positive = TO_RECEIVE
                         if (amount < 0) {
                             totalOwed += kotlin.math.abs(amount)
                         } else {
@@ -187,7 +187,7 @@ class FirestoreFinancialRepository(
                     "email" to entity.email,
                     "address" to entity.address,
                     "notes" to entity.notes,
-                    "initialBalance" to entity.initialBalance,
+                    "balance" to entity.balance,
                     "updatedAt" to updatedAt
                 )
                 

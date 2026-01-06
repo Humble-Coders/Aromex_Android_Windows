@@ -10,6 +10,7 @@ import com.humblecoders.aromex_android_windows.data.firebase.FirebaseInitializer
 import com.humblecoders.aromex_android_windows.data.repository.FirestoreFinancialRepository
 import com.humblecoders.aromex_android_windows.presentation.ui.AndroidHomeScreen
 import com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel
+import com.humblecoders.aromex_android_windows.ui.theme.AromexTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -24,7 +25,9 @@ class MainActivity : ComponentActivity() {
         val homeViewModel = HomeViewModel(financialRepository)
 
         setContent {
-            AndroidHomeScreen(viewModel = homeViewModel)
+            AromexTheme {
+                AndroidHomeScreen(viewModel = homeViewModel)
+            }
         }
     }
 }

@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,27 +21,30 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.humblecoders.aromex_android_windows.domain.model.BalanceType
 import com.humblecoders.aromex_android_windows.domain.model.Entity
 import com.humblecoders.aromex_android_windows.domain.model.EntityType
 import com.humblecoders.aromex_android_windows.ui.theme.AromexColors
+import androidx.compose.material3.MaterialTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEntitySheet(
     onDismiss: () -> Unit,
-    onSave: (Entity) -> Unit
+    onSave: (Entity) -> Unit,
+    viewModel: com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel
 ) {
-    var selectedType by remember { mutableStateOf(EntityType.CUSTOMER) }
-    var name by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
-    var notes by remember { mutableStateOf("") }
-    var initialBalance by remember { mutableStateOf(TextFieldValue("")) }
-    var balanceType by remember { mutableStateOf(BalanceType.TO_RECEIVE) }
+    var selectedType by rememberSaveable { mutableStateOf(EntityType.CUSTOMER) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var phone by rememberSaveable { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
+    var address by rememberSaveable { mutableStateOf("") }
+    var notes by rememberSaveable { mutableStateOf("") }
+    var initialBalance by rememberSaveable(stateSaver = TextFieldValue.Saver) { mutableStateOf(TextFieldValue("")) }
+    var balanceType by rememberSaveable { mutableStateOf(BalanceType.TO_RECEIVE) }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -70,7 +74,9 @@ fun AddEntitySheet(
                     text = "Add New Entity",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = AromexColors.TextDark
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             
@@ -79,8 +85,10 @@ fun AddEntitySheet(
             Text(
                 text = "Type",
                 fontSize = 14.sp,
-                color = AromexColors.TextGrey,
-                modifier = Modifier.padding(bottom = 8.dp)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             TypeRadioSelector(
                 selected = selectedType,
@@ -89,7 +97,14 @@ fun AddEntitySheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text(text = "Name *", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AromexColors.TextDark)
+            Text(
+                text = "Name *",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = name,
@@ -100,14 +115,21 @@ fun AddEntitySheet(
                 textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = AromexColors.BackgroundGrey,
-                    unfocusedContainerColor = AromexColors.BackgroundGrey
+                    focusedContainerColor = MaterialTheme.colorScheme.background,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.background
                 )
             )
             
             Spacer(modifier = Modifier.height(12.dp))
             
-            Text(text = "Phone", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AromexColors.TextDark)
+            Text(
+                text = "Phone",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = phone,
@@ -121,14 +143,21 @@ fun AddEntitySheet(
                 textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = AromexColors.BackgroundGrey,
-                    unfocusedContainerColor = AromexColors.BackgroundGrey
+                    focusedContainerColor = MaterialTheme.colorScheme.background,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.background
                 )
             )
             
             Spacer(modifier = Modifier.height(12.dp))
             
-            Text(text = "Email", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AromexColors.TextDark)
+            Text(
+                text = "Email",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = email,
@@ -139,14 +168,21 @@ fun AddEntitySheet(
                 textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = AromexColors.BackgroundGrey,
-                    unfocusedContainerColor = AromexColors.BackgroundGrey
+                    focusedContainerColor = MaterialTheme.colorScheme.background,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.background
                 )
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text(text = "Address", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AromexColors.TextDark)
+            Text(
+                text = "Address",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = address,
@@ -156,14 +192,21 @@ fun AddEntitySheet(
                 textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = AromexColors.BackgroundGrey,
-                    unfocusedContainerColor = AromexColors.BackgroundGrey
+                    focusedContainerColor = MaterialTheme.colorScheme.background,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.background
                 )
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Text(text = "Notes", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AromexColors.TextDark)
+            Text(
+                text = "Notes",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = notes,
@@ -174,8 +217,8 @@ fun AddEntitySheet(
                 textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = AromexColors.BackgroundGrey,
-                    unfocusedContainerColor = AromexColors.BackgroundGrey
+                    focusedContainerColor = MaterialTheme.colorScheme.background,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.background
                 )
             )
 
@@ -185,7 +228,9 @@ fun AddEntitySheet(
                 text = "Initial Balance",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = AromexColors.TextDark
+                    color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(8.dp))
             
@@ -199,70 +244,17 @@ fun AddEntitySheet(
                         val oldText = initialBalance.text
                         val oldSelection = initialBalance.selection
                         
-                        // Filter to allow only digits, decimal point, and negative sign
-                        var filtered = newValue.text.filter { it.isDigit() || it == '.' || it == '-' }
-                        
-                        // Ensure only one decimal point
-                        val decimalCount = filtered.count { it == '.' }
-                        if (decimalCount > 1) {
-                            val firstDecimalIndex = filtered.indexOf('.')
-                            filtered = filtered.substring(0, firstDecimalIndex + 1) + 
-                                      filtered.substring(firstDecimalIndex + 1).replace(".", "")
-                        }
-                        
-                        // Apply balance type logic and calculate cursor position
-                        val (resultText, cursorOffset) = when (balanceType) {
-                            BalanceType.TO_RECEIVE -> {
-                                // Remove negative sign if present, keep only positive
-                                val result = filtered.replace("-", "")
-                                // Calculate cursor offset: if we removed a negative sign before cursor, adjust
-                                val removedBeforeCursor = if (oldText.startsWith("-") && oldSelection.start > 0) 1 else 0
-                                val newCursor = (newValue.selection.start - removedBeforeCursor).coerceIn(0, result.length)
-                                Pair(result, newCursor)
-                            }
-                            BalanceType.TO_GIVE -> {
-                                // Extract numeric part (digits and decimal point)
-                                val numericPart = filtered.replace("-", "")
-                                
-                                if (numericPart.isEmpty() || numericPart == ".") {
-                                    Pair(numericPart, newValue.selection.start.coerceIn(0, numericPart.length))
-                                } else {
-                                    // For TO_GIVE, we need negative sign
-                                    val finalText = if (filtered.startsWith("-") && 
-                                        filtered.substring(1) == numericPart &&
-                                        numericPart.all { it.isDigit() || it == '.' }) {
-                                        // Value is already in correct format - use it directly to preserve cursor
-                                        filtered
-                                    } else {
-                                        // Need to ensure negative sign is at the start
-                                        "-$numericPart"
-                                    }
-                                    
-                                    // Calculate cursor position
-                                    val newCursor = if (filtered.startsWith("-") && filtered == finalText) {
-                                        // Value was already correct, preserve cursor position from newValue
-                                        newValue.selection.start.coerceIn(0, finalText.length)
-                                    } else {
-                                        // We reconstructed the string, need to adjust cursor
-                                        // If old text didn't have negative and new does, add 1 to cursor
-                                        val cursorAdjustment = if (!oldText.startsWith("-") && finalText.startsWith("-")) {
-                                            1
-                                        } else if (oldText.startsWith("-") && !finalText.startsWith("-")) {
-                                            -1
-                                        } else {
-                                            0
-                                        }
-                                        (newValue.selection.start + cursorAdjustment).coerceIn(0, finalText.length)
-                                    }
-                                    
-                                    Pair(finalText, newCursor)
-                                }
-                            }
-                        }
+                        val result = viewModel.formatBalanceInput(
+                            newText = newValue.text,
+                            newCursorPosition = newValue.selection.start,
+                            oldText = oldText,
+                            oldCursorPosition = oldSelection.start,
+                            balanceType = balanceType
+                        )
                         
                         initialBalance = TextFieldValue(
-                            text = resultText,
-                            selection = TextRange(cursorOffset)
+                            text = result.text,
+                            selection = TextRange(result.cursorPosition)
                         )
                     },
                     label = { Text("Enter amount") },
@@ -283,26 +275,14 @@ fun AddEntitySheet(
                         val currentText = initialBalance.text
                         val numericValue = currentText.replace("-", "").replace(".", "")
                         if (numericValue.isNotEmpty() && numericValue.all { it.isDigit() }) {
-                            val newText = when (newBalanceType) {
-                                BalanceType.TO_RECEIVE -> {
-                                    // Remove negative sign if present
-                                    currentText.replace("-", "")
-                                }
-                                BalanceType.TO_GIVE -> {
-                                    // Add negative sign if not present and value exists
-                                    val valueWithoutSign = currentText.replace("-", "")
-                                    if (valueWithoutSign.isNotEmpty() && !currentText.startsWith("-")) {
-                                        "-$valueWithoutSign"
-                                    } else {
-                                        currentText
-                                    }
-                                }
-                            }
-                            // Preserve cursor position
-                            val cursorPos = initialBalance.selection.start.coerceIn(0, newText.length)
+                            val result = viewModel.formatBalanceOnTypeChange(
+                                currentText = currentText,
+                                currentCursorPosition = initialBalance.selection.start,
+                                newBalanceType = newBalanceType
+                            )
                             initialBalance = TextFieldValue(
-                                text = newText,
-                                selection = TextRange(cursorPos)
+                                text = result.text,
+                                selection = TextRange(result.cursorPosition)
                             )
                         }
                     }
@@ -314,29 +294,14 @@ fun AddEntitySheet(
                 val currentText = initialBalance.text
                 val numericValue = currentText.replace("-", "").replace(".", "")
                 if (numericValue.isNotEmpty() && numericValue.all { it.isDigit() }) {
-                    val newText = when (balanceType) {
-                        BalanceType.TO_RECEIVE -> {
-                            // Ensure positive
-                            if (currentText.startsWith("-")) {
-                                currentText.replace("-", "")
-                            } else {
-                                currentText
-                            }
-                        }
-                        BalanceType.TO_GIVE -> {
-                            // Ensure negative
-                            if (!currentText.startsWith("-") && currentText.isNotEmpty()) {
-                                "-$currentText"
-                            } else {
-                                currentText
-                            }
-                        }
-                    }
-                    // Preserve cursor position
-                    val cursorPos = initialBalance.selection.start.coerceIn(0, newText.length)
+                    val result = viewModel.formatBalanceOnTypeChangeSimple(
+                        currentText = currentText,
+                        currentCursorPosition = initialBalance.selection.start,
+                        balanceType = balanceType
+                    )
                     initialBalance = TextFieldValue(
-                        text = newText,
-                        selection = TextRange(cursorPos)
+                        text = result.text,
+                        selection = TextRange(result.cursorPosition)
                     )
                 }
             }
@@ -353,7 +318,12 @@ fun AddEntitySheet(
                     modifier = Modifier.weight(1f).height(50.dp),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Cancel", color = AromexColors.TextDark)
+                    Text(
+                        text = "Cancel",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
                 Spacer(modifier = Modifier.width(16.dp))
                 Button(
@@ -366,7 +336,7 @@ fun AddEntitySheet(
                                 email = email,
                                 address = address,
                                 notes = notes,
-                                initialBalance = initialBalance.text.toDoubleOrNull() ?: 0.0,
+                                balance = initialBalance.text.toDoubleOrNull() ?: 0.0,
                                 balanceType = balanceType
                             )
                         )
@@ -379,7 +349,11 @@ fun AddEntitySheet(
                         disabledContainerColor = Color(0xFFCCCCCC)
                     )
                 ) {
-                    Text("Save ${selectedType.name.lowercase().capitalize()}")
+                    Text(
+                        text = "Save ${selectedType.name.lowercase().capitalize()}",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
@@ -424,7 +398,7 @@ private fun TypePill(
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
             .background(
-                if (isSelected) AromexColors.LightBlue else AromexColors.BackgroundGrey
+                if (isSelected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.background
             )
             .border(
                 width = 1.dp,
@@ -464,8 +438,10 @@ private fun TypePill(
             Text(
                 text = text,
                 fontSize = 12.sp,
-                color = AromexColors.TextDark,
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                    color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -480,7 +456,7 @@ private fun BalanceTypeSelector(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(AromexColors.BackgroundGrey)
+            .background(MaterialTheme.colorScheme.background)
             .padding(4.dp)
     ) {
         BalanceTypeOption(
@@ -518,7 +494,7 @@ private fun BalanceTypeOption(
     ) {
         Text(
             text = text,
-            color = if (isSelected) Color.White else AromexColors.TextGrey,
+            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             fontSize = 14.sp
         )
