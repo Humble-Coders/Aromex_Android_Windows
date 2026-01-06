@@ -64,7 +64,7 @@ fun AndroidHomeScreen(
             viewModel.dismissEntitySuccess()
         }
     }
-
+    ;
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
