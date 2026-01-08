@@ -1,9 +1,11 @@
 package com.humblecoders.aromex_android_windows
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.humblecoders.aromex_android_windows.data.firebase.FirebaseInitializer
@@ -15,6 +17,7 @@ import com.humblecoders.aromex_android_windows.presentation.viewmodel.PurchaseVi
 import com.humblecoders.aromex_android_windows.ui.theme.AromexTheme
 
 class MainActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
