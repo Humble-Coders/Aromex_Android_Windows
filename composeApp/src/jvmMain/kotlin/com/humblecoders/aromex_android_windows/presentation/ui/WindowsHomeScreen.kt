@@ -24,6 +24,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.animation.core.Animatable
+import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import kotlinx.coroutines.launch
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.input.TextFieldValue
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel
+import com.humblecoders.aromex_android_windows.presentation.viewmodel.PurchaseViewModel
 import com.humblecoders.aromex_android_windows.domain.model.EntityType
 import com.humblecoders.aromex_android_windows.ui.theme.AromexColors
 import androidx.compose.material3.MaterialTheme
@@ -52,6 +54,7 @@ private fun getAromexSuccessContainerColor(isDarkTheme: Boolean): Color {
 @Composable
 fun WindowsHomeScreen(
     viewModel: HomeViewModel,
+    purchaseViewModel: PurchaseViewModel,
     onNavigate: (String) -> Unit = {},
     isDarkTheme: Boolean = false,
     onThemeToggle: () -> Unit = {}
@@ -88,6 +91,9 @@ fun WindowsHomeScreen(
         when (currentScreen) {
             "Purchase" -> {
                 WindowsPurchaseScreen(
+                    viewModel = purchaseViewModel,
+                    homeViewModel = viewModel,
+                    isDarkTheme = isDarkTheme,
                     modifier = Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background)
@@ -258,7 +264,7 @@ fun Sidebar(
                 interactionSource = remember { MutableInteractionSource() }
             ) {
                 Icon(
-                    imageVector = if (expanded) Icons.Default.MenuOpen else Icons.Default.Menu,
+                    imageVector = if (expanded) Icons.AutoMirrored.Filled.MenuOpen else Icons.Default.Menu,
                     contentDescription = "Toggle Menu",
                     tint = Color.White
                 )
@@ -797,7 +803,7 @@ fun EditBalanceDialog(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(onDismissRequest = {}) {
         Card(
             modifier = Modifier
                 .width(500.dp)
@@ -980,7 +986,7 @@ fun EditBalanceDialog(
                         modifier = Modifier
                             .weight(1f)
                             .pointerHoverIcon(PointerIcon.Hand),
-                        colors = ButtonDefaults.buttonColors(containerColor = AromexColors.ButtonBlue),
+                        colors = ButtonDefaults.buttonColors(containerColor = AromexColors.ButtonBlue()),
                         interactionSource = remember { MutableInteractionSource() }
                     ) {
                         Icon(

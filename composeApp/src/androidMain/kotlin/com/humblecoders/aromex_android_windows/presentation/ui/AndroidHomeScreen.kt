@@ -39,6 +39,7 @@ import com.humblecoders.aromex_android_windows.ui.theme.getAromexSuccessContaine
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.graphics.Color
 import com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel
+import com.humblecoders.aromex_android_windows.presentation.viewmodel.PurchaseViewModel
 import com.humblecoders.aromex_android_windows.domain.model.EntityType
 import kotlinx.coroutines.launch
 
@@ -46,6 +47,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun AndroidHomeScreen(
     viewModel: HomeViewModel,
+    purchaseViewModel: PurchaseViewModel,
     onNavigate: (String) -> Unit = {}
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -82,6 +84,8 @@ fun AndroidHomeScreen(
         when (currentScreen) {
             "Purchase" -> {
                 AndroidPurchaseScreen(
+                    viewModel = purchaseViewModel,
+                    homeViewModel = viewModel,
                     onMenuClick = { scope.launch { drawerState.open() } },
                     modifier = Modifier
                         .fillMaxSize()

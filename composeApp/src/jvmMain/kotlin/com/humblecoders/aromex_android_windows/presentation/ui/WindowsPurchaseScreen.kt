@@ -1,10 +1,14 @@
 package com.humblecoders.aromex_android_windows.presentation.ui
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,6 +37,13 @@ import androidx.compose.ui.zIndex
 import com.humblecoders.aromex_android_windows.ui.theme.AromexColors
 import androidx.compose.material3.MaterialTheme
 import com.humblecoders.aromex_android_windows.ui.theme.getAromexSuccessColor
+import com.humblecoders.aromex_android_windows.presentation.viewmodel.PurchaseViewModel
+import com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel
+import com.humblecoders.aromex_android_windows.domain.model.Entity
+import com.humblecoders.aromex_android_windows.domain.model.EntityType
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -41,13 +52,20 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WindowsPurchaseScreen(
+    viewModel: PurchaseViewModel,
+    homeViewModel: HomeViewModel,
+    isDarkTheme: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var orderNumber by remember { mutableStateOf("123") }
     var date by remember { mutableStateOf("1 January 2026") }
     var supplierExpanded by remember { mutableStateOf(false) }
-    var selectedSupplier by remember { mutableStateOf<String?>(null) }
-    val suppliers = listOf("Supplier 1", "Supplier 2", "Supplier 3")
+    var selectedSupplier by remember { mutableStateOf<Entity?>(null) }
+    var supplierSearchQuery by remember { mutableStateOf("") }
+    
+    // Get entities from viewmodel
+    val entities by viewModel.entities.collectAsState()
+    
     
     // Calendar popup state
     var calendarExpanded by remember { mutableStateOf(false) }
@@ -60,8 +78,18 @@ fun WindowsPurchaseScreen(
     var rootPosition by remember { mutableStateOf(Offset.Zero) }
     val density = LocalDensity.current
     
+    // Supplier field position tracking
+    var supplierFieldPosition by remember { mutableStateOf(Offset.Zero) }
+    var textFieldHeight by remember { mutableStateOf(0.dp) }
+    var supplierFieldWidth by remember { mutableStateOf(0.dp) }
+    
     // Add Product Dialog state
     var showAddProductDialog by remember { mutableStateOf(false) }
+    
+    // Add Entity Dialog state
+    var showAddEntityDialog by remember { mutableStateOf(false) }
+    var addEntityInitialName by remember { mutableStateOf("") }
+    var addEntityInitialType by remember { mutableStateOf<EntityType?>(null) }
 
     Box(
         modifier = modifier
@@ -101,7 +129,7 @@ fun WindowsPurchaseScreen(
                 text = "Purchase",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -112,7 +140,7 @@ fun WindowsPurchaseScreen(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(
-                containerColor = AromexColors.ForegroundWhite
+                containerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
@@ -137,7 +165,7 @@ fun WindowsPurchaseScreen(
                                 text = "Order number",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -177,7 +205,7 @@ fun WindowsPurchaseScreen(
                             text = "Date",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -205,7 +233,7 @@ fun WindowsPurchaseScreen(
                             text = "Supplier",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -228,24 +256,25 @@ fun WindowsPurchaseScreen(
                     // Order Number Field
                     OutlinedTextField(
                         value = orderNumber,
-                        onValueChange = { orderNumber = it },
+                        onValueChange = { newValue -> orderNumber = newValue },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                         shape = RoundedCornerShape(10.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = AromexColors.ForegroundWhite,
-                            unfocusedContainerColor = AromexColors.ForegroundWhite,
+                            focusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite,
+                            unfocusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite,
                             focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface
+                            focusedTextColor = if (isDarkTheme) Color.White else Color.Black,
+                            unfocusedTextColor = if (isDarkTheme) Color.White else Color.Black
                         )
                     )
 
                     // Date Field
                     OutlinedTextField(
                         value = date,
-                        onValueChange = { date = it },
+                        onValueChange = { newValue -> date = newValue },
                         modifier = Modifier
                             .weight(1f)
                             .onGloballyPositioned { coordinates ->
@@ -269,71 +298,133 @@ fun WindowsPurchaseScreen(
                             )
                         },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = AromexColors.ForegroundWhite,
-                            unfocusedContainerColor = AromexColors.ForegroundWhite,
+                            focusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite(),
+                            unfocusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite(),
                             focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface
+                            focusedTextColor = if (isDarkTheme) Color.White else Color.Black,
+                            unfocusedTextColor = if (isDarkTheme) Color.White else Color.Black
                         )
                     )
 
                     // Supplier Field
-                    ExposedDropdownMenuBox(
-                        expanded = supplierExpanded,
-                        onExpandedChange = { supplierExpanded = !supplierExpanded },
-                        modifier = Modifier.weight(1f)
+                    val selected = selectedSupplier // Store in local variable for smart cast
+                    // Display selected supplier name when selected, otherwise show search query
+                    val displayValue = if (selected != null && !supplierExpanded) {
+                        selected.name
+                    } else {
+                        supplierSearchQuery
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .onGloballyPositioned { coordinates ->
+                                supplierFieldPosition = coordinates.positionInRoot()
+                                textFieldHeight = with(density) { coordinates.size.height.toDp() }
+                                supplierFieldWidth = with(density) { coordinates.size.width.toDp() }
+                            }
                     ) {
                         OutlinedTextField(
-                            value = selectedSupplier ?: "",
-                            onValueChange = {},
-                            readOnly = true,
-                            placeholder = {
-                                Text(
-                                    text = "Choose an option",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 14.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                            value = displayValue,
+                            onValueChange = { newValue: String ->
+                                supplierSearchQuery = newValue
+                                // Clear selection if user types something different
+                                if (selected != null && newValue != selected.name) {
+                                    selectedSupplier = null
+                                }
+                                supplierExpanded = true
                             },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(),
+                            placeholder = {
+                                if (selected == null) {
+                                    Text(
+                                        text = "Search supplier...",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 14.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                             shape = RoundedCornerShape(10.dp),
+                            // Use leadingIcon as spacer when selected - needs to account for 16dp padding + 85dp pill + 8dp spacing
+                            // Dropdown text starts at: 16dp + 85dp + 8dp = 109dp from field start
+                            // Text field's leadingIcon area starts around 12dp, text starts after icon with ~8dp spacing
+                            // So we need spacer: 109 - 12 - 8 = 89dp, but add extra to prevent overlap
+                            leadingIcon = if (selected != null) {
+                                {
+                                    Box(modifier = Modifier.width(105.dp))
+                                }
+                            } else null,
                             trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = supplierExpanded)
+                                IconButton(
+                                    onClick = { supplierExpanded = !supplierExpanded },
+                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
+                                ) {
+                                    Icon(
+                                        imageVector = if (supplierExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                        contentDescription = if (supplierExpanded) "Hide" else "Show"
+                                    )
+                                }
                             },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = MaterialTheme.colorScheme.surface,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                                 focusedBorderColor = AromexColors.TextGrey,
                                 unfocusedBorderColor = AromexColors.TextGrey,
-                                focusedTextColor = MaterialTheme.colorScheme.onSurface
+                                focusedTextColor = if (isDarkTheme) Color.White else Color.Black,
+                                unfocusedTextColor = if (isDarkTheme) Color.White else Color.Black,
+                                focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
-                        ExposedDropdownMenu(
-                            expanded = supplierExpanded,
-                            onDismissRequest = { supplierExpanded = false }
-                        ) {
-                            suppliers.forEach { supplier ->
-                                DropdownMenuItem(
-                                    text = {
+                        // Overlay content matching dropdown layout exactly - only show when supplier is selected
+                        if (selected != null) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .align(Alignment.Center)
+                                    .padding(start = 16.dp, end = 48.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Role pill - exactly matching dropdown
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = when (selected.type) {
+                                        EntityType.CUSTOMER -> Color(0xFF2196F3).copy(alpha = 0.2f)
+                                        EntityType.SUPPLIER -> Color(0xFF4CAF50).copy(alpha = 0.2f)
+                                        EntityType.MIDDLEMAN -> Color(0xFFFF9800).copy(alpha = 0.2f)
+                                    },
+                                    modifier = Modifier
+                                        .width(85.dp)
+                                        .height(24.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
                                         Text(
-                                            text = supplier,
-                                            fontSize = 14.sp,
-                                            color = MaterialTheme.colorScheme.onSurface,
+                                            text = when (selected.type) {
+                                                EntityType.CUSTOMER -> "Customer"
+                                                EntityType.SUPPLIER -> "Supplier"
+                                                EntityType.MIDDLEMAN -> "Middleman"
+                                            },
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = when (selected.type) {
+                                                EntityType.CUSTOMER -> Color(0xFF1976D2)
+                                                EntityType.SUPPLIER -> Color(0xFF388E3C)
+                                                EntityType.MIDDLEMAN -> Color(0xFFF57C00)
+                                            },
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
-                                    },
-                                    onClick = {
-                                        selectedSupplier = supplier
-                                        supplierExpanded = false
-                                    },
-                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)
-                                )
+                                    }
+                                }
                             }
                         }
                     }
@@ -360,7 +451,7 @@ fun WindowsPurchaseScreen(
                     Text(
                         text = "The date when this purchase was made",
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (isDarkTheme) Color(0xFFB0B0B0) else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
                             .weight(1f)
                             .padding(start = 4.dp),
@@ -370,7 +461,7 @@ fun WindowsPurchaseScreen(
                     Text(
                         text = "Select a supplier for this purchase",
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (isDarkTheme) Color(0xFFB0B0B0) else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
                             .weight(1f)
                             .padding(start = 4.dp),
@@ -451,17 +542,60 @@ fun WindowsPurchaseScreen(
         }
         }
         
-        // Calendar Popup Overlay - Outside the Column so it can overflow and overlap
-        if (calendarExpanded) {
-            // Semi-transparent overlay to capture clicks and dismiss
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
-                    .clickable { calendarExpanded = false }
-                    .zIndex(999f)
-            ) {}
-            
+        // Supplier Dropdown - Using reusable composable
+        SearchableDropdown(
+            items = entities,
+            selectedItem = selectedSupplier,
+            searchQuery = supplierSearchQuery,
+            expanded = supplierExpanded,
+            onItemSelected = { entity ->
+                selectedSupplier = entity
+                supplierSearchQuery = entity.name
+                supplierExpanded = false
+            },
+            onSearchQueryChange = { newValue ->
+                supplierSearchQuery = newValue
+                if (selectedSupplier != null && newValue != selectedSupplier?.name) {
+                    selectedSupplier = null
+                }
+            },
+            onExpandedChange = { expanded ->
+                supplierExpanded = expanded
+            },
+            onAddNew = { searchQuery ->
+                addEntityInitialName = searchQuery
+                addEntityInitialType = EntityType.SUPPLIER
+                showAddEntityDialog = true
+                supplierExpanded = false
+            },
+            fieldPosition = supplierFieldPosition,
+            fieldHeight = textFieldHeight,
+            fieldWidth = supplierFieldWidth,
+            rootPosition = rootPosition,
+            density = density,
+            isDarkTheme = isDarkTheme,
+            typeFilter = EntityType.SUPPLIER,
+            placeholder = "Search supplier..."
+        )
+        
+        // Calendar Popup - Outside the Column so it can overflow and overlap
+        AnimatedVisibility(
+            visible = calendarExpanded,
+            enter = fadeIn(tween(200)) + scaleIn(
+                initialScale = 0.8f,
+                animationSpec = tween(300)
+            ) + slideInVertically(
+                initialOffsetY = { -it / 4 },
+                animationSpec = tween(300)
+            ),
+            exit = fadeOut(tween(200)) + scaleOut(
+                targetScale = 0.8f,
+                animationSpec = tween(300)
+            ) + slideOutVertically(
+                targetOffsetY = { -it / 4 },
+                animationSpec = tween(300)
+            )
+        ) {
             // Calendar positioned below the date field
             Box(
                 modifier = Modifier
@@ -483,21 +617,39 @@ fun WindowsPurchaseScreen(
                     onMonthChange = { newMonth: YearMonth ->
                         currentMonth = newMonth
                     },
-                    onDismiss = { calendarExpanded = false }
+                    onDismiss = { calendarExpanded = false },
+                    isDarkTheme = isDarkTheme
                 )
             }
         }
-    }
-    
-    // Add Product Dialog
-    if (showAddProductDialog) {
-        AddProductDialog(
-            onClose = { showAddProductDialog = false },
-//            onSave = {
-//                // TODO: Implement product save logic
-//                showAddProductDialog = false
-//            }
+
+        // Add Product Dialog - Inside Box
+        AddProductCard(
+            showCard = showAddProductDialog,
+            isDarkTheme = isDarkTheme,
+            onClose = { showAddProductDialog = false }
         )
+        
+        // Add Entity Dialog
+        if (showAddEntityDialog) {
+            AddEntityDialog(
+                onDismiss = { 
+                    showAddEntityDialog = false
+                    addEntityInitialName = ""
+                    addEntityInitialType = null
+                },
+                onSave = { entity ->
+                    homeViewModel.addEntity(entity)
+                    showAddEntityDialog = false
+                    addEntityInitialName = ""
+                    addEntityInitialType = null
+                },
+                viewModel = homeViewModel,
+                isDarkTheme = isDarkTheme,
+                initialName = addEntityInitialName,
+                initialType = addEntityInitialType
+            )
+        }
     }
 }
 
@@ -507,7 +659,8 @@ fun CalendarPopup(
     currentMonth: YearMonth,
     onDateSelected: (LocalDate) -> Unit,
     onMonthChange: (YearMonth) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    isDarkTheme: Boolean = false
 ) {
     val daysOfWeek = listOf("Su", "Mo", "Tu", "We", "Th", "Fr", "Sa")
     
@@ -525,7 +678,7 @@ fun CalendarPopup(
             .width(320.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.95f)
+            containerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else Color.White.copy(alpha = 0.95f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
@@ -544,7 +697,7 @@ fun CalendarPopup(
                     text = "Select Date",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -587,7 +740,7 @@ fun CalendarPopup(
                     text = currentMonth.format(DateTimeFormatter.ofPattern("MMM yyyy", Locale.ENGLISH)),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

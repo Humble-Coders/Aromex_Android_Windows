@@ -24,10 +24,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.humblecoders.aromex_android_windows.ui.theme.AromexColors
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.isSystemInDarkTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddProductSheet(
+    isDarkTheme: Boolean = false,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -64,7 +67,7 @@ fun AddProductSheet(
                         text = "Add Product",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onSurface
                     )
                 }
 
@@ -76,15 +79,15 @@ fun AddProductSheet(
             Divider()
 
             /* ---------- FIELDS - ONE PER ROW ---------- */
-            Field("Brand *", "Choose an option", Modifier.fillMaxWidth())
-            Field("Model *", "Select a brand first", Modifier.fillMaxWidth())
-            CapacityField(Modifier.fillMaxWidth())
-            Field("IMEI/Serial *", "Enter IMEI or Serial num", Modifier.fillMaxWidth())
-            Field("Carrier *", "Choose an option", Modifier.fillMaxWidth())
-            Field("Color *", "Choose an option", Modifier.fillMaxWidth())
-            Field("Status", "Active", Modifier.fillMaxWidth())
-            Field("Price *", "Enter price (e.g., 299.99)", Modifier.fillMaxWidth())
-            Field("Storage Location *", "Choose an option", Modifier.fillMaxWidth())
+            Field("Brand *", "Choose an option", isDarkTheme, Modifier.fillMaxWidth())
+            Field("Model *", "Select a brand first", isDarkTheme, Modifier.fillMaxWidth())
+            CapacityField(isDarkTheme, Modifier.fillMaxWidth())
+            Field("IMEI/Serial *", "Enter IMEI or Serial num", isDarkTheme, Modifier.fillMaxWidth())
+            Field("Carrier *", "Choose an option", isDarkTheme, Modifier.fillMaxWidth())
+            Field("Color *", "Choose an option", isDarkTheme, Modifier.fillMaxWidth())
+            Field("Status", "Active", isDarkTheme, Modifier.fillMaxWidth())
+            Field("Price *", "Enter price (e.g., 299.99)", isDarkTheme, Modifier.fillMaxWidth())
+            Field("Storage Location *", "Choose an option", isDarkTheme, Modifier.fillMaxWidth())
 
             Spacer(Modifier.height(12.dp))
 
@@ -108,18 +111,24 @@ fun AddProductSheet(
                     )
                 }
 
+                val isSaveEnabled = false
                 Button(
                     modifier = Modifier
                         .weight(2f)
                         .height(50.dp),
                     onClick = {},
                     shape = RoundedCornerShape(10.dp),
-                    enabled = false
+                    enabled = isSaveEnabled,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        disabledContainerColor = Color(0xFFCCCCCC)
+                    )
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = "Add Product",
+                        color = if (!isSaveEnabled && isDarkTheme) Color(0xFF424242) else Color.Unspecified,
                         fontSize = 15.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -134,6 +143,7 @@ fun AddProductSheet(
 private fun Field(
     label: String,
     placeholder: String,
+    isDarkTheme: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(modifier) {
@@ -141,7 +151,7 @@ private fun Field(
             text = label,
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
-            color = AromexColors.TextDark
+            color = if (isDarkTheme) Color.White else AromexColors.TextDark
         )
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
@@ -156,15 +166,22 @@ private fun Field(
                     textAlign = TextAlign.Left
                 )
             },
-            textStyle = TextStyle(textAlign = TextAlign.Left),
+            textStyle = TextStyle(
+                textAlign = TextAlign.Left,
+                color = if (isDarkTheme) Color.White else Color.Black
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
             shape = RoundedCornerShape(10.dp),
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = AromexColors.BackgroundGrey,
-                unfocusedContainerColor = AromexColors.BackgroundGrey
+                focusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.BackgroundGrey,
+                unfocusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.BackgroundGrey,
+                focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                focusedTextColor = if (isDarkTheme) Color.White else Color.Black,
+                unfocusedTextColor = if (isDarkTheme) Color.White else Color.Black
             )
         )
     }
@@ -172,6 +189,7 @@ private fun Field(
 
 @Composable
 private fun CapacityField(
+    isDarkTheme: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var selectedUnit by remember { mutableStateOf("GB") }
@@ -181,7 +199,7 @@ private fun CapacityField(
             text = "Capacity *",
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
-            color = AromexColors.TextDark
+            color = if (isDarkTheme) Color.White else AromexColors.TextDark
         )
         Spacer(Modifier.height(8.dp))
         Box(
@@ -189,7 +207,10 @@ private fun CapacityField(
                 .fillMaxWidth()
                 .height(50.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .border(1.dp, Color(0xFF79747E), RoundedCornerShape(10.dp))
+                .border(1.dp, MaterialTheme.colorScheme.onSurfaceVariant, RoundedCornerShape(10.dp))
+                .background(
+                    if (isDarkTheme) MaterialTheme.colorScheme.surface else Color.White
+                )
         ) {
             Row(
                 modifier = Modifier.fillMaxSize(),
@@ -220,19 +241,29 @@ private fun CapacityField(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(if (selectedUnit == "GB") Color(0xFF2F80ED) else Color(0xFFF2F2F2))
+                            .background(
+                                if (selectedUnit == "GB") Color(0xFF2F80ED)
+                                else if (isDarkTheme) Color(0xFFFAFAFA)
+                                else Color(0xFFF2F2F2)
+                            )
+                            .border(
+                                width = if (selectedUnit == "GB") 0.dp else 1.dp,
+                                color = if (selectedUnit == "GB") Color.Transparent else Color(0xFFE8E8E8),
+                                shape = RoundedCornerShape(6.dp)
+                            )
                             .clickable(
                                 indication = null,
                                 interactionSource = remember { MutableInteractionSource() }
                             ) {
                                 selectedUnit = "GB"
                             }
+                            .height(36.dp)
                             .padding(horizontal = 18.dp, vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "GB",
-                            color = if (selectedUnit == "GB") Color.White else Color.Gray,
+                            color = if (selectedUnit == "GB") Color.White else Color(0xFF424242),
                             fontWeight = if (selectedUnit == "GB") FontWeight.Bold else FontWeight.Normal,
                             fontSize = 13.sp
                         )
@@ -241,19 +272,29 @@ private fun CapacityField(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(if (selectedUnit == "TB") Color(0xFF2F80ED) else Color(0xFFF2F2F2))
+                            .background(
+                                if (selectedUnit == "TB") Color(0xFF2F80ED)
+                                else if (isDarkTheme) Color(0xFFFAFAFA)
+                                else Color(0xFFF2F2F2)
+                            )
+                            .border(
+                                width = if (selectedUnit == "TB") 0.dp else 1.dp,
+                                color = if (selectedUnit == "TB") Color.Transparent else Color(0xFFE8E8E8),
+                                shape = RoundedCornerShape(6.dp)
+                            )
                             .clickable(
                                 indication = null,
                                 interactionSource = remember { MutableInteractionSource() }
                             ) {
                                 selectedUnit = "TB"
                             }
+                            .height(36.dp)
                             .padding(horizontal = 18.dp, vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "TB",
-                            color = if (selectedUnit == "TB") Color.White else Color.Gray,
+                            color = if (selectedUnit == "TB") Color.White else Color(0xFF424242),
                             fontWeight = if (selectedUnit == "TB") FontWeight.Bold else FontWeight.Normal,
                             fontSize = 13.sp
                         )

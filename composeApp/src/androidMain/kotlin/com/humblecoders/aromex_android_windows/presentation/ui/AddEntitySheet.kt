@@ -35,10 +35,22 @@ import androidx.compose.material3.MaterialTheme
 fun AddEntitySheet(
     onDismiss: () -> Unit,
     onSave: (Entity) -> Unit,
-    viewModel: com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel
+    viewModel: com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel,
+    initialName: String = "",
+    initialType: EntityType? = null
 ) {
-    var selectedType by rememberSaveable { mutableStateOf(EntityType.CUSTOMER) }
-    var name by rememberSaveable { mutableStateOf("") }
+    var selectedType by rememberSaveable { mutableStateOf(initialType ?: EntityType.CUSTOMER) }
+    var name by rememberSaveable { mutableStateOf(initialName) }
+    
+    // Update values when dialog is shown with new initial values
+    LaunchedEffect(initialName, initialType) {
+        if (initialName.isNotEmpty()) {
+            name = initialName
+        }
+        if (initialType != null) {
+            selectedType = initialType
+        }
+    }
     var phone by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var address by rememberSaveable { mutableStateOf("") }
