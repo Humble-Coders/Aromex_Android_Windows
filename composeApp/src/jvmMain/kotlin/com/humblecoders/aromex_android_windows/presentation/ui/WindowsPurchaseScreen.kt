@@ -3,12 +3,9 @@ package com.humblecoders.aromex_android_windows.presentation.ui
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,8 +16,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -29,6 +29,7 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -42,8 +43,6 @@ import com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewMo
 import com.humblecoders.aromex_android_windows.domain.model.Entity
 import com.humblecoders.aromex_android_windows.domain.model.EntityType
 import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.Dp
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -83,8 +82,18 @@ fun WindowsPurchaseScreen(
     var textFieldHeight by remember { mutableStateOf(0.dp) }
     var supplierFieldWidth by remember { mutableStateOf(0.dp) }
     
+    // Stable scroll state to prevent layout shifts
+    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    
+    // Track if we're currently typing to prevent position updates during typing
+    var isTyping by remember { mutableStateOf(false) }
+    
     // Add Product Dialog state
     var showAddProductDialog by remember { mutableStateOf(false) }
+    
+    // Add Service Dialog state
+    var showAddServiceDialog by remember { mutableStateOf(false) }
     
     // Add Entity Dialog state
     var showAddEntityDialog by remember { mutableStateOf(false) }
@@ -95,7 +104,9 @@ fun WindowsPurchaseScreen(
         modifier = modifier
             .fillMaxSize()
             .onGloballyPositioned { coordinates ->
-                rootPosition = coordinates.positionInRoot()
+                if (!isTyping) {
+                    rootPosition = coordinates.positionInRoot()
+                }
             }
     ) {
         Column(
@@ -103,7 +114,7 @@ fun WindowsPurchaseScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(24.dp)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
         ) {
         // Header with Title and Icon
         Row(
@@ -183,7 +194,7 @@ fun WindowsPurchaseScreen(
                             interactionSource = remember { MutableInteractionSource() },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                             colors = ButtonDefaults.textButtonColors(
-                                contentColor = AromexColors.AccentBlue
+                                contentColor = AromexColors.AccentBlue()
                             )
                         ) {
                             Text(
@@ -248,22 +259,32 @@ fun WindowsPurchaseScreen(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Input Fields Row - All inputs on the same line
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                // Input Fields Row - All inputs on the same line - Fixed height container
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
                 ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                     // Order Number Field
                     OutlinedTextField(
                         value = orderNumber,
                         onValueChange = { newValue -> orderNumber = newValue },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 56.dp),
                         singleLine = true,
                         textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                         shape = RoundedCornerShape(10.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite,
-                            unfocusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite,
+                            focusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite(),
+                            unfocusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite(),
                             focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             focusedTextColor = if (isDarkTheme) Color.White else Color.Black,
@@ -277,9 +298,12 @@ fun WindowsPurchaseScreen(
                         onValueChange = { newValue -> date = newValue },
                         modifier = Modifier
                             .weight(1f)
+                            .heightIn(min = 56.dp)
                             .onGloballyPositioned { coordinates ->
-                                dateFieldPosition = coordinates.positionInRoot()
-                                dateFieldHeight = with(density) { coordinates.size.height.toDp() }
+                                if (calendarExpanded || !isTyping) {
+                                    dateFieldPosition = coordinates.positionInRoot()
+                                    dateFieldHeight = with(density) { coordinates.size.height.toDp() }
+                                }
                             },
                         singleLine = true,
                         textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
@@ -318,21 +342,30 @@ fun WindowsPurchaseScreen(
                     Box(
                         modifier = Modifier
                             .weight(1f)
+                            .heightIn(min = 56.dp)
                             .onGloballyPositioned { coordinates ->
-                                supplierFieldPosition = coordinates.positionInRoot()
-                                textFieldHeight = with(density) { coordinates.size.height.toDp() }
-                                supplierFieldWidth = with(density) { coordinates.size.width.toDp() }
+                                if (!isTyping || supplierExpanded) {
+                                    supplierFieldPosition = coordinates.positionInRoot()
+                                    textFieldHeight = with(density) { coordinates.size.height.toDp() }
+                                    supplierFieldWidth = with(density) { coordinates.size.width.toDp() }
+                                }
                             }
                     ) {
                         OutlinedTextField(
                             value = displayValue,
                             onValueChange = { newValue: String ->
+                                isTyping = true
                                 supplierSearchQuery = newValue
                                 // Clear selection if user types something different
                                 if (selected != null && newValue != selected.name) {
                                     selectedSupplier = null
                                 }
                                 supplierExpanded = true
+                                // Reset typing flag after a delay
+                                scope.launch {
+                                    delay(300)
+                                    isTyping = false
+                                }
                             },
                             placeholder = {
                                 if (selected == null) {
@@ -345,7 +378,14 @@ fun WindowsPurchaseScreen(
                                     )
                                 }
                             },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onFocusChanged { focusState ->
+                                    // Open dropdown when field gains focus (clicked)
+                                    if (focusState.isFocused && !supplierExpanded) {
+                                        supplierExpanded = true
+                                    }
+                                },
                             singleLine = true,
                             textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                             shape = RoundedCornerShape(10.dp),
@@ -372,8 +412,8 @@ fun WindowsPurchaseScreen(
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = MaterialTheme.colorScheme.surface,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                focusedBorderColor = AromexColors.TextGrey,
-                                unfocusedBorderColor = AromexColors.TextGrey,
+                                focusedBorderColor = AromexColors.TextGrey(),
+                                unfocusedBorderColor = AromexColors.TextGrey(),
                                 focusedTextColor = if (isDarkTheme) Color.White else Color.Black,
                                 unfocusedTextColor = if (isDarkTheme) Color.White else Color.Black,
                                 focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -428,13 +468,16 @@ fun WindowsPurchaseScreen(
                             }
                         }
                     }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 // Helper Texts Row - All helper texts on the same line
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.Top
                 ) {
@@ -488,7 +531,7 @@ fun WindowsPurchaseScreen(
                     .height(56.dp)
                     .pointerHoverIcon(PointerIcon.Hand),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = AromexColors.AccentBlue
+                    containerColor = AromexColors.AccentBlue()
                 ),
                 shape = RoundedCornerShape(12.dp),
                 interactionSource = remember { MutableInteractionSource() }
@@ -512,7 +555,7 @@ fun WindowsPurchaseScreen(
 
             // Add Service Button
             Button(
-                onClick = { /* Add Service - no logic */ },
+                onClick = { showAddServiceDialog = true },
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp)
@@ -630,8 +673,17 @@ fun WindowsPurchaseScreen(
             onClose = { showAddProductDialog = false }
         )
         
+        // Add Service Dialog - Inside Box
+        if (showAddServiceDialog) {
+            AddServiceDialog(
+                isDarkTheme = isDarkTheme,
+                onDismiss = { showAddServiceDialog = false }
+            )
+        }
+        
         // Add Entity Dialog
         if (showAddEntityDialog) {
+
             AddEntityDialog(
                 onDismiss = { 
                     showAddEntityDialog = false
@@ -710,7 +762,7 @@ fun CalendarPopup(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close calendar",
-                        tint = AromexColors.TextGrey,
+                        tint = AromexColors.TextGrey(),
                         modifier = Modifier.size(20.dp)
                     )
                 }

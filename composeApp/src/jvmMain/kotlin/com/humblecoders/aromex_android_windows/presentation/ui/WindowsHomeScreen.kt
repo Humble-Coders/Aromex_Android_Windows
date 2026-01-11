@@ -528,6 +528,7 @@ fun AccountBalancesCard(
     }
 }
 
+@Suppress("DefaultLocale")
 @Composable
 fun BalanceItem(
     label: String,
@@ -540,9 +541,9 @@ fun BalanceItem(
     val rowColor = if (isNegative) {
         if (isDarkTheme) MaterialTheme.colorScheme.errorContainer else Color(0xFFFFEBEE)
     } else {
-        if (isDarkTheme) getAromexSuccessContainerColor(isDarkTheme) else Color(0xFFE8F5E9)
+        if (isDarkTheme) getAromexSuccessContainerColor(true) else Color(0xFFE8F5E9)
     }
-    val textColor = if (isDarkTheme) Color.White else if (isNegative) MaterialTheme.colorScheme.error else getAromexSuccessColor(isDarkTheme)
+    val textColor = if (isDarkTheme) Color.White else if (isNegative) MaterialTheme.colorScheme.error else getAromexSuccessColor(false)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -647,8 +648,8 @@ fun DebtOverviewCard(
             DebtItem(
                 label = "Total Due to Me",
                 amount = debtOverview.totalDueToMe,
-                color = if (isDarkTheme) getAromexSuccessContainerColor(isDarkTheme) else Color(0xFFE8F5E9),
-                textColor = if (isDarkTheme) Color.White else getAromexSuccessColor(isDarkTheme),
+                color = if (isDarkTheme) getAromexSuccessContainerColor(true) else Color(0xFFE8F5E9),
+                textColor = if (isDarkTheme) Color.White else getAromexSuccessColor(false),
                 icon = Icons.Default.ArrowDownward,
                 isDarkTheme = isDarkTheme
             )
@@ -656,6 +657,7 @@ fun DebtOverviewCard(
     }
 }
 
+@Suppress("DefaultLocale")
 @Composable
 fun DebtItem(
     label: String,
@@ -749,12 +751,13 @@ fun QuickActionButton(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
-                tint = AromexColors.TextGrey
+                tint = AromexColors.TextGrey()
             )
         }
     }
 }
 
+@Suppress("DefaultLocale")
 @Composable
 fun EditBalanceDialog(
     balanceType: String,

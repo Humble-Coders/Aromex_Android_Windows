@@ -28,6 +28,7 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -276,6 +277,9 @@ fun AndroidPurchaseScreen(
     
     // Add Product Sheet state
     var showAddProductSheet by rememberSaveable { mutableStateOf(false) }
+    
+    // Add Service Sheet state
+    var showAddServiceSheet by rememberSaveable { mutableStateOf(false) }
     
     // Add Entity Dialog state
     var showAddEntityDialog by rememberSaveable { mutableStateOf(false) }
@@ -531,7 +535,14 @@ fun AndroidPurchaseScreen(
                                         )
                                     }
                                 },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .onFocusChanged { focusState ->
+                                        // Open dropdown when field gains focus (clicked)
+                                        if (focusState.isFocused && !supplierExpanded) {
+                                            supplierExpanded = true
+                                        }
+                                    },
                                 singleLine = true,
                                 textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
                                 shape = RoundedCornerShape(10.dp),
@@ -681,7 +692,7 @@ fun AndroidPurchaseScreen(
 
                 // Add Service Button
                 Button(
-                    onClick = { /* Add Service - no logic */ },
+                    onClick = { showAddServiceSheet = true },
                     modifier = Modifier
                         .weight(1f)
                         .height(56.dp),
@@ -801,6 +812,14 @@ fun AndroidPurchaseScreen(
             AddProductSheet(
                 isDarkTheme = isDarkTheme,
                 onDismiss = { showAddProductSheet = false }
+            )
+        }
+        
+        // Add Service Bottom Sheet
+        if (showAddServiceSheet) {
+            AddServiceSheet(
+                isDarkTheme = isDarkTheme,
+                onDismiss = { showAddServiceSheet = false }
             )
         }
         

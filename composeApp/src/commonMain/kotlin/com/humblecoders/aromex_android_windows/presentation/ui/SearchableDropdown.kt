@@ -17,12 +17,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -155,6 +155,7 @@ fun SearchableDropdown(
                                     onAddNew(searchQuery)
                                     onExpandedChange(false)
                                 }
+                                .pointerHoverIcon(PointerIcon.Hand)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -220,6 +221,7 @@ fun SearchableDropdown(
                                             onAddNew(searchQuery)
                                             onExpandedChange(false)
                                         }
+                                        .pointerHoverIcon(PointerIcon.Hand)
                                 ) {
                                     Row(
                                         modifier = Modifier
@@ -268,6 +270,7 @@ fun SearchableDropdown(
                                         onSearchQueryChange(getItemDisplayName(item))
                                         onExpandedChange(false)
                                     }
+                                    .pointerHoverIcon(PointerIcon.Hand)
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -346,13 +349,15 @@ fun SearchableDropdown(
                                     onClick = { /* TODO: Handle edit action */ },
                                     modifier = Modifier
                                         .align(Alignment.CenterEnd)
-                                        .size(48.dp)
+                                        .padding(end = 8.dp)
+                                        .size(32.dp)
+                                        .pointerHoverIcon(PointerIcon.Hand)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Edit,
                                         contentDescription = "Edit",
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
                             }
@@ -363,4 +368,3 @@ fun SearchableDropdown(
         }
     }
 }
-
