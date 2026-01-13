@@ -16,7 +16,7 @@ data class Entity(
     val email: String,
     val address: String,
     val notes: String,
-    val initialBalance: Double,
+    val balance: Double,
     val balanceType: BalanceType,
     val createdAt: Long = System.currentTimeMillis()
 )
