@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel
+import com.humblecoders.aromex_android_windows.presentation.viewmodel.ProfilesViewModel
 import com.humblecoders.aromex_android_windows.presentation.viewmodel.PurchaseViewModel
 import com.humblecoders.aromex_android_windows.domain.model.EntityType
 import com.humblecoders.aromex_android_windows.ui.theme.AromexColors
@@ -55,6 +56,7 @@ private fun getAromexSuccessContainerColor(isDarkTheme: Boolean): Color {
 fun WindowsHomeScreen(
     viewModel: HomeViewModel,
     purchaseViewModel: PurchaseViewModel,
+    profilesViewModel: ProfilesViewModel,
     onNavigate: (String) -> Unit = {},
     isDarkTheme: Boolean = false,
     onThemeToggle: () -> Unit = {}
@@ -93,6 +95,15 @@ fun WindowsHomeScreen(
                 WindowsPurchaseScreen(
                     viewModel = purchaseViewModel,
                     homeViewModel = viewModel,
+                    isDarkTheme = isDarkTheme,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                )
+            }
+            "Profiles" -> {
+                WindowsProfilesScreen(
+                    viewModel = profilesViewModel,
                     isDarkTheme = isDarkTheme,
                     modifier = Modifier
                         .fillMaxSize()

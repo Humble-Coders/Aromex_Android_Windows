@@ -267,8 +267,13 @@ fun AndroidPurchaseScreen(
     var selectedSupplier by rememberSaveable { mutableStateOf<Entity?>(null) }
     var supplierSearchQuery by rememberSaveable { mutableStateOf("") }
     
-    // Get entities from viewmodel
+    // Get entities from viewmodel (using shared EntityRepository)
     val entities by viewModel.entities.collectAsState()
+    
+    // Start listening when Purchase screen is opened (whichever screen opens first loads the data)
+    LaunchedEffect(Unit) {
+        com.humblecoders.aromex_android_windows.data.repository.FirestoreEntityRepository.startListening()
+    }
     
     // Calendar popup state
     var calendarExpanded by rememberSaveable { mutableStateOf(false) }

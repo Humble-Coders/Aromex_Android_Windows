@@ -9,10 +9,11 @@ import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.humblecoders.aromex_android_windows.data.firebase.FirebaseInitializer
+import com.humblecoders.aromex_android_windows.data.repository.FirestoreEntityRepository
 import com.humblecoders.aromex_android_windows.data.repository.FirestoreFinancialRepository
-import com.humblecoders.aromex_android_windows.data.repository.FirestorePurchaseRepository
 import com.humblecoders.aromex_android_windows.presentation.ui.AndroidHomeScreen
 import com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel
+import com.humblecoders.aromex_android_windows.presentation.viewmodel.ProfilesViewModel
 import com.humblecoders.aromex_android_windows.presentation.viewmodel.PurchaseViewModel
 import com.humblecoders.aromex_android_windows.ui.theme.AromexTheme
 
@@ -25,21 +26,35 @@ class MainActivity : ComponentActivity() {
         // Initialize Firebase using application context
         FirebaseInitializer.initialize(applicationContext)
         
+        val firestore = FirebaseInitializer.getFirestore()
+        
+        // Initialize singleton EntityRepository
+        // Note: Listening will start when Purchase or Profiles screen is opened (whichever opens first)
+        FirestoreEntityRepository.initialize(firestore)
+        
         // Create repositories and view models
-        val financialRepository = FirestoreFinancialRepository(FirebaseInitializer.getFirestore())
+        val financialRepository = FirestoreFinancialRepository(firestore)
         val homeViewModel = HomeViewModel(financialRepository)
         
-        val purchaseRepository = FirestorePurchaseRepository(FirebaseInitializer.getFirestore())
-        val purchaseViewModel = PurchaseViewModel(purchaseRepository)
+        // Both ViewModels use the same singleton EntityRepository
+        val purchaseViewModel = PurchaseViewModel(FirestoreEntityRepository)
+        val profilesViewModel = ProfilesViewModel(FirestoreEntityRepository)
 
         setContent {
             AromexTheme {
                 AndroidHomeScreen(
                     viewModel = homeViewModel,
-                    purchaseViewModel = purchaseViewModel
+                    purchaseViewModel = purchaseViewModel,
+                    profilesViewModel = profilesViewModel
                 )
             }
         }
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        // Stop listening when activity is destroyed
+        FirestoreEntityRepository.stopListening()
     }
 }
 

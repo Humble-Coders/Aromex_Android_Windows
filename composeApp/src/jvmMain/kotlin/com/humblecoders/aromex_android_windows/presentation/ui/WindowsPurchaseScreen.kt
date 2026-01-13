@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +34,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -62,9 +66,13 @@ fun WindowsPurchaseScreen(
     var selectedSupplier by remember { mutableStateOf<Entity?>(null) }
     var supplierSearchQuery by remember { mutableStateOf("") }
     
-    // Get entities from viewmodel
+    // Get entities from viewmodel (using shared EntityRepository)
     val entities by viewModel.entities.collectAsState()
     
+    // Start listening when Purchase screen is opened (whichever screen opens first loads the data)
+    LaunchedEffect(Unit) {
+        com.humblecoders.aromex_android_windows.data.repository.FirestoreEntityRepository.startListening()
+    }
     
     // Calendar popup state
     var calendarExpanded by remember { mutableStateOf(false) }
