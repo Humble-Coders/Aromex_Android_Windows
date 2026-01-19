@@ -10,7 +10,8 @@ import kotlinx.coroutines.flow.StateFlow
  * No need to start/stop listeners - the repository manages that.
  */
 class PurchaseViewModel(
-    private val entityRepository: EntityRepository
+    private val entityRepository: EntityRepository,
+    val specificationViewModel: SpecificationViewModel
 ) {
     /**
      * Expose the shared entities StateFlow directly from the repository.

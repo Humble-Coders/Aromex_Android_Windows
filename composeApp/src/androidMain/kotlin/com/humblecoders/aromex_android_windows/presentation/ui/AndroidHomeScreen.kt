@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Color
 import com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel
 import com.humblecoders.aromex_android_windows.presentation.viewmodel.ProfilesViewModel
 import com.humblecoders.aromex_android_windows.presentation.viewmodel.PurchaseViewModel
+import com.humblecoders.aromex_android_windows.presentation.viewmodel.ExpenseViewModel
 import com.humblecoders.aromex_android_windows.domain.model.EntityType
 import kotlinx.coroutines.launch
 
@@ -50,6 +51,7 @@ fun AndroidHomeScreen(
     viewModel: HomeViewModel,
     purchaseViewModel: PurchaseViewModel,
     profilesViewModel: ProfilesViewModel,
+    expenseViewModel: ExpenseViewModel,
     onNavigate: (String) -> Unit = {}
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -107,6 +109,7 @@ fun AndroidHomeScreen(
             else -> {
                 MainContent(
                     viewModel = viewModel,
+                    expenseViewModel = expenseViewModel,
                     onMenuClick = { scope.launch { drawerState.open() } },
                     onAddEntityClick = { viewModel.showAddEntitySheet() },
                     modifier = Modifier
@@ -332,6 +335,7 @@ fun MenuItem(
 @Composable
 fun MainContent(
     viewModel: HomeViewModel,
+    expenseViewModel: ExpenseViewModel,
     onMenuClick: () -> Unit,
     onAddEntityClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -342,6 +346,8 @@ fun MainContent(
     val showEditSheet by viewModel.showEditBalanceSheet.collectAsState()
     val editingBalanceType by viewModel.editingBalanceType.collectAsState()
     val editingCurrentAmount by viewModel.editingCurrentAmount.collectAsState()
+
+    var showAddExpenseSheet by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -429,7 +435,7 @@ fun MainContent(
         QuickActionButton(
             text = "Add Expense",
             icon = Icons.Default.RemoveCircle,
-            onClick = { /* TODO */ },
+            onClick = { showAddExpenseSheet = true },
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -444,6 +450,14 @@ fun MainContent(
                 viewModel.updateSingleBalance(editingBalanceType!!, newAmount)
                 viewModel.dismissEditBalanceSheet()
             }
+        )
+    }
+
+    // Add Expense Bottom Sheet
+    if (showAddExpenseSheet) {
+        AddExpenseBottomSheet(
+            viewModel = expenseViewModel,
+            onDismiss = { showAddExpenseSheet = false }
         )
     }
 }

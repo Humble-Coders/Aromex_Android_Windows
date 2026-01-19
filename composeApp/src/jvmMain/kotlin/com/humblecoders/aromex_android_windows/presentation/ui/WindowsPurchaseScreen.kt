@@ -47,6 +47,7 @@ import com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewMo
 import com.humblecoders.aromex_android_windows.domain.model.Entity
 import com.humblecoders.aromex_android_windows.domain.model.EntityType
 import androidx.compose.runtime.collectAsState
+import com.humblecoders.aromex_android_windows.presentation.ui.components.SaveConfirmationDialog
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -68,11 +69,6 @@ fun WindowsPurchaseScreen(
     
     // Get entities from viewmodel (using shared EntityRepository)
     val entities by viewModel.entities.collectAsState()
-    
-    // Start listening when Purchase screen is opened (whichever screen opens first loads the data)
-    LaunchedEffect(Unit) {
-        com.humblecoders.aromex_android_windows.data.repository.FirestoreEntityRepository.startListening()
-    }
     
     // Calendar popup state
     var calendarExpanded by remember { mutableStateOf(false) }
@@ -100,6 +96,28 @@ fun WindowsPurchaseScreen(
     // Add Product Dialog state
     var showAddProductDialog by remember { mutableStateOf(false) }
     
+    // Track if we're saving a product (to show confirmation dialog)
+    var isSavingProduct by remember { mutableStateOf(false) }
+    
+    // Collect product save states from specificationViewModel
+    val isLoadingProduct by viewModel.specificationViewModel.isLoading.collectAsState()
+    val productSuccessMessage by viewModel.specificationViewModel.successMessage.collectAsState()
+    
+    val isProductSaveSuccess = productSuccessMessage != null && 
+        productSuccessMessage!!.contains("Product added", ignoreCase = true)
+    
+    LaunchedEffect(productSuccessMessage, isLoadingProduct) {
+        if (isSavingProduct && !isLoadingProduct && productSuccessMessage != null && !isProductSaveSuccess) {
+            isSavingProduct = false
+        }
+    }
+    
+    LaunchedEffect(isProductSaveSuccess, isSavingProduct) {
+        if (isProductSaveSuccess && isSavingProduct) {
+            showAddProductDialog = false
+        }
+    }
+    
     // Add Service Dialog state
     var showAddServiceDialog by remember { mutableStateOf(false) }
     
@@ -107,6 +125,39 @@ fun WindowsPurchaseScreen(
     var showAddEntityDialog by remember { mutableStateOf(false) }
     var addEntityInitialName by remember { mutableStateOf("") }
     var addEntityInitialType by remember { mutableStateOf<EntityType?>(null) }
+    
+    // Track newly created entity to auto-select it
+    var pendingEntitySelection by remember { mutableStateOf<Pair<String, EntityType>?>(null) }
+    
+    // Start listening when Purchase screen is opened (whichever screen opens first loads the data)
+    LaunchedEffect(Unit) {
+        com.humblecoders.aromex_android_windows.data.repository.FirestoreEntityRepository.startListening()
+        // Fetch specification data (brands, capacities, carriers, colors, storageLocations, unitCosts)
+        viewModel.specificationViewModel.fetchAllSpecifications()
+    }
+    
+    // Collect specification data from ViewModel
+    val brands by viewModel.specificationViewModel.brands.collectAsState()
+    val capacities by viewModel.specificationViewModel.capacities.collectAsState()
+    val carriers by viewModel.specificationViewModel.carriers.collectAsState()
+    val colors by viewModel.specificationViewModel.colors.collectAsState()
+    val storageLocations by viewModel.specificationViewModel.storageLocations.collectAsState()
+    val unitCosts by viewModel.specificationViewModel.unitCosts.collectAsState()
+    
+    // Auto-select newly created entity when it appears in the list
+    LaunchedEffect(entities, pendingEntitySelection) {
+        val pending = pendingEntitySelection
+        if (pending != null) {
+            val (entityName, entityType) = pending
+            // Find the entity that matches the name and type
+            val newEntity = entities.find { it.name == entityName && it.type == entityType }
+            if (newEntity != null) {
+                selectedSupplier = newEntity
+                supplierSearchQuery = newEntity.name
+                pendingEntitySelection = null
+            }
+        }
+    }
 
     Box(
         modifier = modifier
@@ -159,7 +210,7 @@ fun WindowsPurchaseScreen(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite
+                containerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite()
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
@@ -613,11 +664,12 @@ fun WindowsPurchaseScreen(
             onExpandedChange = { expanded ->
                 supplierExpanded = expanded
             },
-            onAddNew = { searchQuery ->
+            onAddNew = { searchQuery, _ ->
                 addEntityInitialName = searchQuery
                 addEntityInitialType = EntityType.SUPPLIER
                 showAddEntityDialog = true
                 supplierExpanded = false
+                // Note: Entity selection happens after dialog saves
             },
             fieldPosition = supplierFieldPosition,
             fieldHeight = textFieldHeight,
@@ -626,7 +678,11 @@ fun WindowsPurchaseScreen(
             density = density,
             isDarkTheme = isDarkTheme,
             typeFilter = EntityType.SUPPLIER,
-            placeholder = "Search supplier..."
+            placeholder = "Search supplier...",
+            getItemDisplayName = { it.name },
+            getItemId = { it.id },
+            getItemType = { it.type },
+            showRolePill = true
         )
         
         // Calendar Popup - Outside the Column so it can overflow and overlap
@@ -678,9 +734,10 @@ fun WindowsPurchaseScreen(
         AddProductCard(
             showCard = showAddProductDialog,
             isDarkTheme = isDarkTheme,
-            onClose = { showAddProductDialog = false }
+            specificationViewModel = viewModel.specificationViewModel,
+            onClose = { showAddProductDialog = false },
+            onSaveStarted = { isSavingProduct = true }
         )
-        
         // Add Service Dialog - Inside Box
         if (showAddServiceDialog) {
             AddServiceDialog(
@@ -700,6 +757,8 @@ fun WindowsPurchaseScreen(
                 },
                 onSave = { entity ->
                     homeViewModel.addEntity(entity)
+                    // Store entity info to auto-select when it appears in the list
+                    pendingEntitySelection = Pair(entity.name, entity.type)
                     showAddEntityDialog = false
                     addEntityInitialName = ""
                     addEntityInitialType = null

@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -97,10 +98,10 @@ fun AndroidProfilesScreen(
             }
 
             // Horizontal Divider
-            Divider(
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+            HorizontalDivider(
+                modifier = Modifier.padding(bottom = 16.dp),
                 thickness = 1.dp,
-                modifier = Modifier.padding(bottom = 16.dp)
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
             )
 
             // Search Bar
@@ -361,7 +362,7 @@ fun ProfileRow(
             
             // Phone number or dash
             Text(
-                text = if (entity.phone.isNotBlank()) entity.phone else "-",
+                text = entity.phone.ifBlank { "-" },
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Normal,
                 color = if (entity.phone.isNotBlank()) {

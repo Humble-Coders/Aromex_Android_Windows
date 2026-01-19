@@ -70,14 +70,14 @@ fun AddEntitySheet(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = AromexColors.LightBlue,
+                    color = AromexColors.LightBlue(),
                     modifier = Modifier.size(40.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.PersonAdd,
                             contentDescription = null,
-                            tint = AromexColors.AccentBlue
+                            tint = AromexColors.AccentBlue()
                         )
                     }
                 }
@@ -357,7 +357,7 @@ fun AddEntitySheet(
                     modifier = Modifier.weight(2f).height(50.dp),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = AromexColors.ButtonBlue,
+                        containerColor = AromexColors.ButtonBlue(),
                         disabledContainerColor = Color(0xFFCCCCCC)
                     )
                 ) {
@@ -414,7 +414,7 @@ private fun TypePill(
             )
             .border(
                 width = 1.dp,
-                color = if (isSelected) AromexColors.AccentBlue else Color(0xFFE0E0E0),
+                color = if (isSelected) AromexColors.AccentBlue() else Color(0xFFE0E0E0),
                 shape = RoundedCornerShape(16.dp)
             )
             .clickable(
@@ -434,7 +434,7 @@ private fun TypePill(
                     .size(16.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(
-                        if (isSelected) AromexColors.AccentBlue else AromexColors.ForegroundWhite
+                        if (isSelected) AromexColors.AccentBlue() else AromexColors.ForegroundWhite()
                     ),
                 contentAlignment = Alignment.Center
             ) {

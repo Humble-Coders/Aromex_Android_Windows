@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.humblecoders.aromex_android_windows.ui.theme.AromexColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.HorizontalDivider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,7 +87,7 @@ fun AddServiceSheet(
                     text = "Service Name",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = if (isDarkTheme) Color.White else AromexColors.TextDark
+                    color = if (isDarkTheme) Color.White else AromexColors.TextDark()
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
@@ -110,8 +111,8 @@ fun AddServiceSheet(
                     shape = RoundedCornerShape(10.dp),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.BackgroundGrey,
-                        unfocusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.BackgroundGrey,
+                        focusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.BackgroundGrey(),
+                        unfocusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.BackgroundGrey(),
                         focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         focusedTextColor = if (isDarkTheme) Color.White else Color.Black,
@@ -126,7 +127,7 @@ fun AddServiceSheet(
                     text = "Price",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = if (isDarkTheme) Color.White else AromexColors.TextDark
+                    color = if (isDarkTheme) Color.White else AromexColors.TextDark()
                 )
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
@@ -138,7 +139,7 @@ fun AddServiceSheet(
                         val decimalCount = filtered.count { it == '.' }
                         if (decimalCount > 1) {
                             val firstDecimalIndex = filtered.indexOf('.')
-                            filtered = filtered.substring(0, firstDecimalIndex + 1) +
+                            filtered = filtered.take(firstDecimalIndex + 1) +
                                     filtered.substring(firstDecimalIndex + 1).replace(".", "")
                         }
                         price = filtered
@@ -161,8 +162,8 @@ fun AddServiceSheet(
                     shape = RoundedCornerShape(10.dp),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.BackgroundGrey,
-                        unfocusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.BackgroundGrey,
+                        focusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.BackgroundGrey(),
+                        unfocusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.BackgroundGrey(),
                         focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         focusedTextColor = if (isDarkTheme) Color.White else Color.Black,

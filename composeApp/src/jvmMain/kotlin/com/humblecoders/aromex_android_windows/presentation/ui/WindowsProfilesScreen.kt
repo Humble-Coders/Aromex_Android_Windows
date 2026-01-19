@@ -7,16 +7,14 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -86,13 +84,13 @@ fun WindowsProfilesScreen(
         )
 
         // Horizontal Divider
-        Divider(
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-            thickness = 1.dp,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
+            HorizontalDivider(
+                modifier = Modifier.padding(bottom = 16.dp),
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+            )
 
-        // Search Bar
+            // Search Bar
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -351,7 +349,7 @@ fun ProfileRow(
             
             // Phone number or dash
             Text(
-                text = if (entity.phone.isNotBlank()) entity.phone else "-",
+                text = entity.phone.ifBlank { "-" },
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Normal,
                 color = if (entity.phone.isNotBlank()) {

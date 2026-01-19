@@ -1,6 +1,5 @@
 package com.humblecoders.aromex_android_windows.presentation.ui
 
-import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -13,7 +12,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,9 +23,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import kotlinx.coroutines.launch
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.TextRange
@@ -40,7 +36,6 @@ import androidx.compose.ui.window.Dialog
 import com.humblecoders.aromex_android_windows.domain.model.BalanceType
 import com.humblecoders.aromex_android_windows.domain.model.Entity
 import com.humblecoders.aromex_android_windows.domain.model.EntityType
-import com.humblecoders.aromex_android_windows.ui.theme.AromexColors
 import androidx.compose.material3.MaterialTheme
 import com.humblecoders.aromex_android_windows.ui.theme.getAromexSuccessColor
 
@@ -207,8 +202,8 @@ fun AddEntityDialog(
                                 focusedContainerColor = MaterialTheme.colorScheme.surface,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                                 errorContainerColor = MaterialTheme.colorScheme.surface,
-                    focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 focusedTextColor = if (isDarkTheme) Color.White else Color.Black,
                                 unfocusedTextColor = if (isDarkTheme) Color.White else Color.Black,
                                 errorBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,

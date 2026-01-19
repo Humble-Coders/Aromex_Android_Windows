@@ -7,8 +7,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,13 +19,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -125,7 +120,7 @@ fun CalendarPopup(
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Previous month",
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(16.dp)
@@ -146,7 +141,7 @@ fun CalendarPopup(
                     modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ArrowForward,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = "Next month",
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(16.dp)
@@ -188,7 +183,7 @@ fun CalendarPopup(
                     ) {
                         for (dayOfWeek in 0..6) {
                             val dayToShow = dayCounter
-                            val isCurrentMonth = dayToShow > 0 && dayToShow <= daysInMonth
+                            val isCurrentMonth = dayToShow in 1..daysInMonth
                             val dayValue = when {
                                 dayToShow < 1 -> {
                                     // Previous month
@@ -270,11 +265,6 @@ fun AndroidPurchaseScreen(
     // Get entities from viewmodel (using shared EntityRepository)
     val entities by viewModel.entities.collectAsState()
     
-    // Start listening when Purchase screen is opened (whichever screen opens first loads the data)
-    LaunchedEffect(Unit) {
-        com.humblecoders.aromex_android_windows.data.repository.FirestoreEntityRepository.startListening()
-    }
-    
     // Calendar popup state
     var calendarExpanded by rememberSaveable { mutableStateOf(false) }
     var selectedDate by rememberSaveable(stateSaver = LocalDateSaver) { mutableStateOf(LocalDate.of(2026, 1, 1)) }
@@ -290,6 +280,39 @@ fun AndroidPurchaseScreen(
     var showAddEntityDialog by rememberSaveable { mutableStateOf(false) }
     var addEntityInitialName by rememberSaveable { mutableStateOf("") }
     var addEntityInitialType by rememberSaveable { mutableStateOf<EntityType?>(null) }
+    
+    // Track newly created entity to auto-select it
+    var pendingEntitySelection by remember { mutableStateOf<Pair<String, EntityType>?>(null) }
+    
+    // Start listening when Purchase screen is opened (whichever screen opens first loads the data)
+    LaunchedEffect(Unit) {
+        com.humblecoders.aromex_android_windows.data.repository.FirestoreEntityRepository.startListening()
+        // Fetch specification data (brands, capacities, carriers, colors, storageLocations, unitCosts)
+        viewModel.specificationViewModel.fetchAllSpecifications()
+    }
+    
+    // Collect specification data from ViewModel
+    val brands by viewModel.specificationViewModel.brands.collectAsState()
+    val capacities by viewModel.specificationViewModel.capacities.collectAsState()
+    val carriers by viewModel.specificationViewModel.carriers.collectAsState()
+    val colors by viewModel.specificationViewModel.colors.collectAsState()
+    val storageLocations by viewModel.specificationViewModel.storageLocations.collectAsState()
+    val unitCosts by viewModel.specificationViewModel.unitCosts.collectAsState()
+    
+    // Auto-select newly created entity when it appears in the list
+    LaunchedEffect(entities, pendingEntitySelection) {
+        val pending = pendingEntitySelection
+        if (pending != null) {
+            val (entityName, entityType) = pending
+            // Find the entity that matches the name and type
+            val newEntity = entities.find { it.name == entityName && it.type == entityType }
+            if (newEntity != null) {
+                selectedSupplier = newEntity
+                supplierSearchQuery = newEntity.name
+                pendingEntitySelection = null
+            }
+        }
+    }
     
     // Root position tracking for dropdown
     var rootPosition by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
@@ -364,7 +387,7 @@ fun AndroidPurchaseScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite
+                    containerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite()
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
@@ -505,11 +528,7 @@ fun AndroidPurchaseScreen(
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         val selected = selectedSupplier // Store in local variable for smart cast
-                        val displayValue = if (selected != null) {
-                            selected.name
-                        } else {
-                            supplierSearchQuery
-                        }
+                        val displayValue = selected?.name ?: supplierSearchQuery
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -566,8 +585,8 @@ fun AndroidPurchaseScreen(
                                     }
                                 },
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite,
-                                    unfocusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite,
+                                    focusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite(),
+                                    unfocusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite(),
                                     focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                     focusedTextColor = if (isDarkTheme) Color.White else Color.Black,
@@ -751,11 +770,12 @@ fun AndroidPurchaseScreen(
             onExpandedChange = { expanded ->
                 supplierExpanded = expanded
             },
-            onAddNew = { searchQuery ->
+            onAddNew = { searchQuery, _ ->
                 addEntityInitialName = searchQuery
                 addEntityInitialType = EntityType.SUPPLIER
                 showAddEntityDialog = true
                 supplierExpanded = false
+                // Note: Entity selection happens after dialog saves
             },
             fieldPosition = supplierFieldPosition,
             fieldHeight = textFieldHeight,
@@ -764,7 +784,11 @@ fun AndroidPurchaseScreen(
             density = density,
             isDarkTheme = isDarkTheme,
             typeFilter = EntityType.SUPPLIER,
-            placeholder = "Search supplier..."
+            placeholder = "Search supplier...",
+            getItemDisplayName = { it.name },
+            getItemId = { it.id },
+            getItemType = { it.type },
+            showRolePill = true
         )
         
         // Calendar Popup - Outside the Column so it can overflow and overlap
@@ -816,6 +840,7 @@ fun AndroidPurchaseScreen(
         if (showAddProductSheet) {
             AddProductSheet(
                 isDarkTheme = isDarkTheme,
+                specificationViewModel = viewModel.specificationViewModel,
                 onDismiss = { showAddProductSheet = false }
             )
         }
@@ -838,6 +863,8 @@ fun AndroidPurchaseScreen(
                 },
                 onSave = { entity ->
                     homeViewModel.addEntity(entity)
+                    // Store entity info to auto-select when it appears in the list
+                    pendingEntitySelection = Pair(entity.name, entity.type)
                     showAddEntityDialog = false
                     addEntityInitialName = ""
                     addEntityInitialType = null

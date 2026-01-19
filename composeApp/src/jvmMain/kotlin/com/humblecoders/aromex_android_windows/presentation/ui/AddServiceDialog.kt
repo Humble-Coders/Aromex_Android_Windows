@@ -179,7 +179,7 @@ fun AddServiceDialog(
                             val decimalCount = filtered.count { it == '.' }
                             if (decimalCount > 1) {
                                 val firstDecimalIndex = filtered.indexOf('.')
-                                filtered = filtered.substring(0, firstDecimalIndex + 1) +
+                                filtered = filtered.take(firstDecimalIndex + 1) +
                                         filtered.substring(firstDecimalIndex + 1).replace(".", "")
                             }
                             price = filtered
