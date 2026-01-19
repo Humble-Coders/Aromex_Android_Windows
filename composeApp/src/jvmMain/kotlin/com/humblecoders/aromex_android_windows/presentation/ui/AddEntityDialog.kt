@@ -1,6 +1,5 @@
 package com.humblecoders.aromex_android_windows.presentation.ui
 
-import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -13,7 +12,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,9 +23,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearOutSlowInEasing
 import kotlinx.coroutines.launch
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.TextRange
@@ -40,7 +36,6 @@ import androidx.compose.ui.window.Dialog
 import com.humblecoders.aromex_android_windows.domain.model.BalanceType
 import com.humblecoders.aromex_android_windows.domain.model.Entity
 import com.humblecoders.aromex_android_windows.domain.model.EntityType
-import com.humblecoders.aromex_android_windows.ui.theme.AromexColors
 import androidx.compose.material3.MaterialTheme
 import com.humblecoders.aromex_android_windows.ui.theme.getAromexSuccessColor
 
@@ -50,10 +45,22 @@ fun AddEntityDialog(
     onDismiss: () -> Unit,
     onSave: (Entity) -> Unit,
     viewModel: com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel,
-    isDarkTheme: Boolean = false
+    isDarkTheme: Boolean = false,
+    initialName: String = "",
+    initialType: EntityType? = null
 ) {
-    var selectedType by remember { mutableStateOf(EntityType.CUSTOMER) }
-    var name by remember { mutableStateOf("") }
+    var selectedType by remember { mutableStateOf(initialType ?: EntityType.CUSTOMER) }
+    var name by remember { mutableStateOf(initialName) }
+    
+    // Update values when dialog is shown with new initial values
+    LaunchedEffect(initialName, initialType) {
+        if (initialName.isNotEmpty()) {
+            name = initialName
+        }
+        if (initialType != null) {
+            selectedType = initialType
+        }
+    }
     var phone by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
@@ -90,7 +97,7 @@ fun AddEntityDialog(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(onDismissRequest = {}) {
         Card(
             modifier = Modifier
                 .width(800.dp)
@@ -195,8 +202,8 @@ fun AddEntityDialog(
                                 focusedContainerColor = MaterialTheme.colorScheme.surface,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                                 errorContainerColor = MaterialTheme.colorScheme.surface,
-                    focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
                                 focusedTextColor = if (isDarkTheme) Color.White else Color.Black,
                                 unfocusedTextColor = if (isDarkTheme) Color.White else Color.Black,
                                 errorBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -366,91 +373,26 @@ fun AddEntityDialog(
                         unfocusedTextColor = if (isDarkTheme) Color.White else Color.Black
                     ),
                     trailingIcon = {
-                        Row(
-                            modifier = Modifier.padding(end = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // To Receive button
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(if (balanceType == BalanceType.TO_RECEIVE) getAromexSuccessColor() else MaterialTheme.colorScheme.background)
-                                    .clickable(
-                                        indication = null,
-                                        interactionSource = remember { MutableInteractionSource() }
-                                    ) {
-                                        balanceType = BalanceType.TO_RECEIVE
-                                        // Adjust sign when balance type changes
-                                        val currentText = initialBalance.text
-                                        val numericValue = currentText.replace("-", "").replace(".", "")
-                                        if (numericValue.isNotEmpty() && numericValue.all { it.isDigit() }) {
-                                            val result = viewModel.formatBalanceOnTypeChange(
-                                                currentText = currentText,
-                                                currentCursorPosition = initialBalance.selection.start,
-                                                newBalanceType = BalanceType.TO_RECEIVE
-                                            )
-                                            initialBalance = TextFieldValue(
-                                                text = result.text,
-                                                selection = TextRange(result.cursorPosition)
-                                            )
-                                        }
-                                    }
-                                    .pointerHoverIcon(PointerIcon.Hand)
-                                    .height(28.dp)
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "To Receive",
-                                    color = if (balanceType == BalanceType.TO_RECEIVE) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = if (balanceType == BalanceType.TO_RECEIVE) FontWeight.Bold else FontWeight.Normal,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    fontSize = 12.sp
-                                )
+                        BalanceTypeSelector(
+                            selected = balanceType,
+                            onSelect = { newBalanceType ->
+                                balanceType = newBalanceType
+                                // Adjust sign when balance type changes
+                                val currentText = initialBalance.text
+                                val numericValue = currentText.replace("-", "").replace(".", "")
+                                if (numericValue.isNotEmpty() && numericValue.all { it.isDigit() }) {
+                                    val result = viewModel.formatBalanceOnTypeChange(
+                                        currentText = currentText,
+                                        currentCursorPosition = initialBalance.selection.start,
+                                        newBalanceType = newBalanceType
+                                    )
+                                    initialBalance = TextFieldValue(
+                                        text = result.text,
+                                        selection = TextRange(result.cursorPosition)
+                                    )
+                                }
                             }
-                            // To Give button
-                            Box(
-                                modifier = Modifier
-                                    .padding(end = 12.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(if (balanceType == BalanceType.TO_GIVE) Color(0xFFE57373) else MaterialTheme.colorScheme.background)
-                                    .clickable(
-                                        indication = null,
-                                        interactionSource = remember { MutableInteractionSource() }
-                                    ) {
-                                        balanceType = BalanceType.TO_GIVE
-                                        // Adjust sign when balance type changes
-                                        val currentText = initialBalance.text
-                                        val numericValue = currentText.replace("-", "").replace(".", "")
-                                        if (numericValue.isNotEmpty() && numericValue.all { it.isDigit() }) {
-                                            val result = viewModel.formatBalanceOnTypeChange(
-                                                currentText = currentText,
-                                                currentCursorPosition = initialBalance.selection.start,
-                                                newBalanceType = BalanceType.TO_GIVE
-                                            )
-                                            initialBalance = TextFieldValue(
-                                                text = result.text,
-                                                selection = TextRange(result.cursorPosition)
-                                            )
-                                        }
-                                    }
-                                    .pointerHoverIcon(PointerIcon.Hand)
-                                    .height(28.dp)
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "To Give",
-                                    color = if (balanceType == BalanceType.TO_GIVE) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = if (balanceType == BalanceType.TO_GIVE) FontWeight.Bold else FontWeight.Normal,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
+                        )
                     }
                 )
 
@@ -498,9 +440,10 @@ fun AddEntityDialog(
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
+                    val isSaveEnabled = name.isNotBlank()
                     Button(
                         onClick = {
-                            if (name.isNotBlank()) {
+                            if (isSaveEnabled) {
                                 onSave(
                                     Entity(
                                         type = selectedType,
@@ -515,7 +458,7 @@ fun AddEntityDialog(
                                 )
                             }
                         },
-                        enabled = name.isNotBlank(),
+                        enabled = isSaveEnabled,
                         modifier = Modifier
                             .weight(2f)
                             .height(50.dp)
@@ -529,6 +472,7 @@ fun AddEntityDialog(
                     ) {
                         Text(
                             text = "Save ${selectedType.name.lowercase().capitalize()}",
+                            color = if (!isSaveEnabled && isDarkTheme) Color(0xFF424242) else Color.Unspecified,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -633,25 +577,22 @@ fun BalanceTypeSelector(
     onSelect: (BalanceType) -> Unit
 ) {
     Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.background)
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        modifier = Modifier.padding(end = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         BalanceTypeOption(
             text = "To Receive",
             isSelected = selected == BalanceType.TO_RECEIVE,
             onClick = { onSelect(BalanceType.TO_RECEIVE) },
-            color = getAromexSuccessColor(),
-            modifier = Modifier.weight(1f)
+            color = getAromexSuccessColor()
         )
         BalanceTypeOption(
             text = "To Give",
             isSelected = selected == BalanceType.TO_GIVE,
             onClick = { onSelect(BalanceType.TO_GIVE) },
             color = Color(0xFFE57373),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.padding(end = 12.dp)
         )
     }
 }
@@ -667,17 +608,28 @@ fun BalanceTypeOption(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(if (isSelected) color else Color.Transparent)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .background(if (isSelected) color else Color(0xFFFAFAFA))
+            .border(
+                width = if (isSelected) 0.dp else 1.dp,
+                color = if (isSelected) Color.Transparent else Color(0xFFE8E8E8),
+                shape = RoundedCornerShape(6.dp)
+            )
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) { onClick() }
+            .pointerHoverIcon(PointerIcon.Hand)
+            .height(36.dp)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (isSelected) Color.White else Color(0xFF424242),
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            fontSize = 14.sp,
-            maxLines = 1
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            fontSize = 12.sp
         )
     }
 }

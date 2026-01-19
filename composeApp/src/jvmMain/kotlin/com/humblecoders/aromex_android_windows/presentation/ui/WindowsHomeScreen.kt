@@ -24,6 +24,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.animation.core.Animatable
+import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import kotlinx.coroutines.launch
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.input.TextFieldValue
@@ -33,10 +34,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel
+import com.humblecoders.aromex_android_windows.presentation.viewmodel.ProfilesViewModel
+import com.humblecoders.aromex_android_windows.presentation.viewmodel.PurchaseViewModel
 import com.humblecoders.aromex_android_windows.domain.model.EntityType
 import com.humblecoders.aromex_android_windows.ui.theme.AromexColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.Color
+import com.humblecoders.aromex_android_windows.presentation.ui.components.SaveConfirmationDialog
 
 // Windows-specific helper functions that use the theme state instead of system theme
 @Composable
@@ -52,6 +56,9 @@ private fun getAromexSuccessContainerColor(isDarkTheme: Boolean): Color {
 @Composable
 fun WindowsHomeScreen(
     viewModel: HomeViewModel,
+    purchaseViewModel: PurchaseViewModel,
+    profilesViewModel: ProfilesViewModel,
+    expenseViewModel: com.humblecoders.aromex_android_windows.presentation.viewmodel.ExpenseViewModel,
     onNavigate: (String) -> Unit = {},
     isDarkTheme: Boolean = false,
     onThemeToggle: () -> Unit = {}
@@ -64,13 +71,11 @@ fun WindowsHomeScreen(
     val isSavingEntity by viewModel.isSavingEntity.collectAsState()
     val lastSavedType by viewModel.lastSavedEntityType.collectAsState()
     val showEntitySuccess by viewModel.showEntitySuccess.collectAsState()
+    
+    // Expense saving states
+    val isSavingExpense by expenseViewModel.isSavingTransaction.collectAsState()
+    val showExpenseSuccess by expenseViewModel.showExpenseSuccess.collectAsState()
 
-    LaunchedEffect(showEntitySuccess) {
-        if (showEntitySuccess) {
-            kotlinx.coroutines.delay(2500) // Show success dialog for 2.5 seconds
-            viewModel.dismissEntitySuccess()
-        }
-    }
 
     Row(modifier = Modifier.fillMaxSize()) {
         // Sidebar
@@ -88,6 +93,18 @@ fun WindowsHomeScreen(
         when (currentScreen) {
             "Purchase" -> {
                 WindowsPurchaseScreen(
+                    viewModel = purchaseViewModel,
+                    homeViewModel = viewModel,
+                    isDarkTheme = isDarkTheme,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                )
+            }
+            "Profiles" -> {
+                WindowsProfilesScreen(
+                    viewModel = profilesViewModel,
+                    isDarkTheme = isDarkTheme,
                     modifier = Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background)
@@ -96,6 +113,8 @@ fun WindowsHomeScreen(
             else -> {
                 MainContent(
                     viewModel = viewModel,
+                    profilesViewModel = profilesViewModel,
+                    expenseViewModel = expenseViewModel,
                     onAddEntityClick = { viewModel.showAddEntitySheet() },
                     isDarkTheme = isDarkTheme,
                     onThemeToggle = onThemeToggle,
@@ -118,98 +137,31 @@ fun WindowsHomeScreen(
         )
     }
 
-    if (isSavingEntity || showEntitySuccess) {
-        val typeLabel = when (lastSavedType) {
-            EntityType.CUSTOMER -> "Customer"
-            EntityType.SUPPLIER -> "Supplier"
-            EntityType.MIDDLEMAN -> "Middleman"
-            null -> "Entity"
-        }
-        Dialog(onDismissRequest = {}) {
-            Box(contentAlignment = Alignment.Center) {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 32.dp, vertical = 24.dp)
-                            .defaultMinSize(minWidth = 200.dp, minHeight = 100.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = isSavingEntity,
-                            enter = fadeIn(
-                                animationSpec = tween(200, easing = FastOutSlowInEasing)
-                            ) + scaleIn(
-                                initialScale = 0.8f,
-                                animationSpec = tween(200, easing = FastOutSlowInEasing)
-                            ),
-                            exit = fadeOut(
-                                animationSpec = tween(200, easing = FastOutSlowInEasing)
-                            ) + scaleOut(
-                                targetScale = 0.8f,
-                                animationSpec = tween(200, easing = FastOutSlowInEasing)
-                            )
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                CircularProgressIndicator()
-                                Text(
-                                    text = "Saving $typeLabel...",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = showEntitySuccess,
-                            enter = fadeIn(
-                                animationSpec = tween(300, easing = FastOutSlowInEasing)
-                            ) + scaleIn(
-                                initialScale = 0.8f,
-                                animationSpec = tween(300, easing = FastOutSlowInEasing)
-                            ) + slideInVertically(
-                                initialOffsetY = { it / 4 },
-                                animationSpec = tween(300, easing = FastOutSlowInEasing)
-                            ),
-                            exit = fadeOut(
-                                animationSpec = tween(200, easing = FastOutSlowInEasing)
-                            ) + scaleOut(
-                                targetScale = 0.95f,
-                                animationSpec = tween(200, easing = FastOutSlowInEasing)
-                            )
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = getAromexSuccessColor(isDarkTheme),
-                                    modifier = Modifier.size(40.dp)
-                                )
-                                Text(
-                                    text = "$typeLabel Added Successfully!",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    // Entity Save Confirmation Dialog
+    val entityTypeLabel = when (lastSavedType) {
+        EntityType.CUSTOMER -> "Customer"
+        EntityType.SUPPLIER -> "Supplier"
+        EntityType.MIDDLEMAN -> "Middleman"
+        null -> "Entity"
     }
+    SaveConfirmationDialog(
+        isSaving = isSavingEntity,
+        showSuccess = showEntitySuccess,
+        savingText = "Saving $entityTypeLabel...",
+        successText = "$entityTypeLabel Added Successfully!",
+        isDarkTheme = isDarkTheme,
+        onDismissSuccess = { viewModel.dismissEntitySuccess() }
+    )
+    
+    // Expense Save Confirmation Dialog
+    SaveConfirmationDialog(
+        isSaving = isSavingExpense,
+        showSuccess = showExpenseSuccess,
+        savingText = "Saving Expense...",
+        successText = "Expense Added Successfully!",
+        isDarkTheme = isDarkTheme,
+        onDismissSuccess = { expenseViewModel.dismissExpenseSuccess() }
+    )
 }
 
 @Composable
@@ -258,7 +210,7 @@ fun Sidebar(
                 interactionSource = remember { MutableInteractionSource() }
             ) {
                 Icon(
-                    imageVector = if (expanded) Icons.Default.MenuOpen else Icons.Default.Menu,
+                    imageVector = if (expanded) Icons.AutoMirrored.Filled.MenuOpen else Icons.Default.Menu,
                     contentDescription = "Toggle Menu",
                     tint = Color.White
                 )
@@ -328,6 +280,8 @@ fun MenuItem(
 @Composable
 fun MainContent(
     viewModel: HomeViewModel,
+    profilesViewModel: ProfilesViewModel,
+    expenseViewModel: com.humblecoders.aromex_android_windows.presentation.viewmodel.ExpenseViewModel,
     onAddEntityClick: () -> Unit,
     isDarkTheme: Boolean = false,
     onThemeToggle: () -> Unit = {},
@@ -339,6 +293,8 @@ fun MainContent(
     val showEditDialog by viewModel.showEditBalanceSheet.collectAsState()
     val editingBalanceType by viewModel.editingBalanceType.collectAsState()
     val editingCurrentAmount by viewModel.editingCurrentAmount.collectAsState()
+
+    var showAddExpenseDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -434,7 +390,7 @@ fun MainContent(
             QuickActionButton(
                 text = "Add Expense",
                 icon = Icons.Default.RemoveCircle,
-                onClick = { /* TODO */ },
+                onClick = { showAddExpenseDialog = true },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -451,6 +407,14 @@ fun MainContent(
                 viewModel.updateSingleBalance(editingBalanceType!!, newAmount)
                 viewModel.dismissEditBalanceSheet()
             }
+        )
+    }
+
+    if (showAddExpenseDialog) {
+        AddExpenseDialog(
+            viewModel = expenseViewModel,
+            isDarkTheme = isDarkTheme,
+            onDismiss = { showAddExpenseDialog = false }
         )
     }
 }
@@ -522,6 +486,7 @@ fun AccountBalancesCard(
     }
 }
 
+@Suppress("DefaultLocale")
 @Composable
 fun BalanceItem(
     label: String,
@@ -534,9 +499,9 @@ fun BalanceItem(
     val rowColor = if (isNegative) {
         if (isDarkTheme) MaterialTheme.colorScheme.errorContainer else Color(0xFFFFEBEE)
     } else {
-        if (isDarkTheme) getAromexSuccessContainerColor(isDarkTheme) else Color(0xFFE8F5E9)
+        if (isDarkTheme) getAromexSuccessContainerColor(true) else Color(0xFFE8F5E9)
     }
-    val textColor = if (isDarkTheme) Color.White else if (isNegative) MaterialTheme.colorScheme.error else getAromexSuccessColor(isDarkTheme)
+    val textColor = if (isDarkTheme) Color.White else if (isNegative) MaterialTheme.colorScheme.error else getAromexSuccessColor(false)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -641,8 +606,8 @@ fun DebtOverviewCard(
             DebtItem(
                 label = "Total Due to Me",
                 amount = debtOverview.totalDueToMe,
-                color = if (isDarkTheme) getAromexSuccessContainerColor(isDarkTheme) else Color(0xFFE8F5E9),
-                textColor = if (isDarkTheme) Color.White else getAromexSuccessColor(isDarkTheme),
+                color = if (isDarkTheme) getAromexSuccessContainerColor(true) else Color(0xFFE8F5E9),
+                textColor = if (isDarkTheme) Color.White else getAromexSuccessColor(false),
                 icon = Icons.Default.ArrowDownward,
                 isDarkTheme = isDarkTheme
             )
@@ -650,6 +615,7 @@ fun DebtOverviewCard(
     }
 }
 
+@Suppress("DefaultLocale")
 @Composable
 fun DebtItem(
     label: String,
@@ -743,12 +709,13 @@ fun QuickActionButton(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
-                tint = AromexColors.TextGrey
+                tint = AromexColors.TextGrey()
             )
         }
     }
 }
 
+@Suppress("DefaultLocale")
 @Composable
 fun EditBalanceDialog(
     balanceType: String,
@@ -797,7 +764,7 @@ fun EditBalanceDialog(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(onDismissRequest = {}) {
         Card(
             modifier = Modifier
                 .width(500.dp)
@@ -892,7 +859,7 @@ fun EditBalanceDialog(
                             val decimalCount = filtered.count { it == '.' }
                             if (decimalCount > 1) {
                                 val firstDecimalIndex = filtered.indexOf('.')
-                                filtered = filtered.substring(0, firstDecimalIndex + 1) +
+                                filtered = filtered.take(firstDecimalIndex + 1) +
                                         filtered.substring(firstDecimalIndex + 1).replace(".", "")
                             }
 
@@ -980,7 +947,7 @@ fun EditBalanceDialog(
                         modifier = Modifier
                             .weight(1f)
                             .pointerHoverIcon(PointerIcon.Hand),
-                        colors = ButtonDefaults.buttonColors(containerColor = AromexColors.ButtonBlue),
+                        colors = ButtonDefaults.buttonColors(containerColor = AromexColors.ButtonBlue()),
                         interactionSource = remember { MutableInteractionSource() }
                     ) {
                         Icon(

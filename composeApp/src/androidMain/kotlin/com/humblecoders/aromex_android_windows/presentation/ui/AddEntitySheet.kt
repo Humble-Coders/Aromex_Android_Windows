@@ -42,10 +42,22 @@ import com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewMo
 fun AddEntitySheet(
     onDismiss: () -> Unit,
     onSave: (Entity) -> Unit,
-    viewModel: com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel
+    viewModel: com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel,
+    initialName: String = "",
+    initialType: EntityType? = null
 ) {
-    var selectedType by rememberSaveable { mutableStateOf(EntityType.CUSTOMER) }
-    var name by rememberSaveable { mutableStateOf("") }
+    var selectedType by rememberSaveable { mutableStateOf(initialType ?: EntityType.CUSTOMER) }
+    var name by rememberSaveable { mutableStateOf(initialName) }
+    
+    // Update values when dialog is shown with new initial values
+    LaunchedEffect(initialName, initialType) {
+        if (initialName.isNotEmpty()) {
+            name = initialName
+        }
+        if (initialType != null) {
+            selectedType = initialType
+        }
+    }
     var phone by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var address by rememberSaveable { mutableStateOf("") }
@@ -65,15 +77,22 @@ fun AddEntitySheet(
 
 
         ) {
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-
-                // Cancel (secondary action)
+            // Header
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = AromexColors.LightBlue(),
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.PersonAdd,
+                            contentDescription = null,
+                            tint = AromexColors.AccentBlue()
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(16.dp))
                 Text(
                     text = "Cancel",
                     fontSize = 16.sp,
@@ -623,37 +642,36 @@ fun AddEntitySheet(
 //                    )
 //                }
                 Spacer(modifier = Modifier.width(16.dp))
-//                Button(
-//                    onClick = {
-//                        onSave(
-//                            Entity(
-//                                type = selectedType,
-//                                name = name,
-//                                phone = phone,
-//                                email = email,
-//                                address = address,
-//                                notes = notes,
-//                                balance = initialBalance.text.toDoubleOrNull() ?: 0.0,
-//                                balanceType = balanceType
-//                            )
-//                        )
-//                    },
-//                    enabled = name.isNotBlank(),
-//                    modifier = Modifier.weight(2f).height(50.dp),
-//                    shape = RoundedCornerShape(8.dp),
-//                    colors = ButtonDefaults.buttonColors(
-//                        containerColor = AromexColors.ButtonBlue,
-//                        disabledContainerColor = Color(0xFFCCCCCC)
-//                    )
-//                ) {
-//                    Text(
-//                        text = "Save ${selectedType.name.lowercase().capitalize()}",
-//                        maxLines = 1,
-//                        overflow = TextOverflow.Ellipsis
-//                    )
-//                }
-
-        }
+                Button(
+                    onClick = {
+                        onSave(
+                            Entity(
+                                type = selectedType,
+                                name = name,
+                                phone = phone,
+                                email = email,
+                                address = address,
+                                notes = notes,
+                                balance = initialBalance.text.toDoubleOrNull() ?: 0.0,
+                                balanceType = balanceType
+                            )
+                        )
+                    },
+                    enabled = name.isNotBlank(),
+                    modifier = Modifier.weight(2f).height(50.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = AromexColors.ButtonBlue(),
+                        disabledContainerColor = Color(0xFFCCCCCC)
+                    )
+                ) {
+                    Text(
+                        text = "Save ${selectedType.name.lowercase().capitalize()}",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
         }
     }
 }
@@ -723,8 +741,8 @@ private fun TypePill(
             .background(backgroundColor)
             .border(
                 width = 1.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(18.dp)
+                color = if (isSelected) AromexColors.AccentBlue() else Color(0xFFE0E0E0),
+                shape = RoundedCornerShape(16.dp)
             )
             .clickable(onClick = onClick)
             .padding(horizontal = 10.dp),
@@ -737,10 +755,11 @@ private fun TypePill(
             // radio indicator
             Box(
                 modifier = Modifier
-                    .size(14.dp)
-                    .clip(CircleShape)
-                    .border(1.5.dp, color, CircleShape)
-                    .background(if (isSelected) color else Color.Transparent),
+                    .size(16.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        if (isSelected) AromexColors.AccentBlue() else AromexColors.ForegroundWhite()
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 if (isSelected) {

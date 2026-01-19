@@ -60,6 +60,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.IntOffset
 import com.humblecoders.aromex_android_windows.presentation.viewmodel.HomeViewModel
+import com.humblecoders.aromex_android_windows.presentation.viewmodel.ProfilesViewModel
+import com.humblecoders.aromex_android_windows.presentation.viewmodel.PurchaseViewModel
+import com.humblecoders.aromex_android_windows.presentation.viewmodel.ExpenseViewModel
 import com.humblecoders.aromex_android_windows.domain.model.EntityType
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -69,6 +72,9 @@ import kotlinx.coroutines.time.delay
 @Composable
 fun AndroidHomeScreen(
     viewModel: HomeViewModel,
+    purchaseViewModel: PurchaseViewModel,
+    profilesViewModel: ProfilesViewModel,
+    expenseViewModel: ExpenseViewModel,
     onNavigate: (String) -> Unit = {}
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -105,15 +111,28 @@ fun AndroidHomeScreen(
         when (currentScreen) {
             "Purchase" -> {
                 AndroidPurchaseScreen(
+                    viewModel = purchaseViewModel,
+                    homeViewModel = viewModel,
                     onMenuClick = { scope.launch { drawerState.open() } },
                     modifier = Modifier
                         .fillMaxSize()
                         .windowInsetsPadding(WindowInsets.systemBars)
                 )
             }
+            "Profiles" -> {
+                AndroidProfilesScreen(
+                    viewModel = profilesViewModel,
+                    onMenuClick = { scope.launch { drawerState.open() } },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                        .windowInsetsPadding(WindowInsets.systemBars)
+                )
+            }
             else -> {
                 MainContent(
                     viewModel = viewModel,
+                    expenseViewModel = expenseViewModel,
                     onMenuClick = { scope.launch { drawerState.open() } },
                     onAddEntityClick = { viewModel.showAddEntitySheet() },
                     modifier = Modifier
@@ -356,6 +375,7 @@ fun MenuItem(
 @Composable
 fun MainContent(
     viewModel: HomeViewModel,
+    expenseViewModel: ExpenseViewModel,
     onMenuClick: () -> Unit,
     onAddEntityClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -367,32 +387,28 @@ fun MainContent(
     val editingBalanceType by viewModel.editingBalanceType.collectAsState()
     val editingCurrentAmount by viewModel.editingCurrentAmount.collectAsState()
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = {
-            // 🔒 Fixed header (non-scrollable)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onMenuClick) {
-                    Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = "Menu",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+    var showAddExpenseSheet by rememberSaveable { mutableStateOf(false) }
 
-                Text(
-                    text = "Home",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+            .padding(bottom = 16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        // Top Bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onMenuClick) {
+                Icon(
+                    imageVector = Icons.Default.Menu,
+                    contentDescription = "Menu",
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
 
                 Spacer(modifier = Modifier.width(48.dp)) // keeps title centered
@@ -463,13 +479,12 @@ fun MainContent(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            QuickActionButton(
-                text = "Add Expense",
-                icon = Icons.Default.RemoveCircle,
-                onClick = { /* TODO */ },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
+        QuickActionButton(
+            text = "Add Expense",
+            icon = Icons.Default.RemoveCircle,
+            onClick = { showAddExpenseSheet = true },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 
     // Bottom Sheet stays outside Scaffold content
@@ -481,6 +496,14 @@ fun MainContent(
             onDismiss = { 
                 viewModel.dismissEditBalanceSheet()
             }
+        )
+    }
+
+    // Add Expense Bottom Sheet
+    if (showAddExpenseSheet) {
+        AddExpenseBottomSheet(
+            viewModel = expenseViewModel,
+            onDismiss = { showAddExpenseSheet = false }
         )
     }
 }

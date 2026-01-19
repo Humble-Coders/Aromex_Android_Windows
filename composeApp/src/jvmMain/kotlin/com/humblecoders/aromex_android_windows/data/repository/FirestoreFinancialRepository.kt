@@ -81,16 +81,14 @@ class FirestoreFinancialRepository(
                 
                 totalOwed = 0.0
                 totalDueToMe = 0.0
-                if (snapshot != null) {
-                    snapshot.documents.forEach { document ->
-                        val data = document.data
-                        val amount = (data?.get("balance") as? Number)?.toDouble() ?: 0.0
-                        // Derive balanceType from balance sign: negative = TO_GIVE, positive = TO_RECEIVE
-                        if (amount < 0) {
-                            totalOwed += kotlin.math.abs(amount)
-                        } else {
-                            totalDueToMe += amount
-                        }
+                snapshot?.documents?.forEach { document ->
+                    val data = document.data
+                    val amount = (data?.get("balance") as? Number)?.toDouble() ?: 0.0
+                    // Derive balanceType from balance sign: negative = TO_GIVE, positive = TO_RECEIVE
+                    if (amount < 0) {
+                        totalOwed += kotlin.math.abs(amount)
+                    } else {
+                        totalDueToMe += amount
                     }
                 }
                 
@@ -215,4 +213,6 @@ class FirestoreFinancialRepository(
         return formatted.replace("UTC+0", "UTC+").replace("UTC-0", "UTC-")
     }
 }
+
+// pushing this in windows branch
 
