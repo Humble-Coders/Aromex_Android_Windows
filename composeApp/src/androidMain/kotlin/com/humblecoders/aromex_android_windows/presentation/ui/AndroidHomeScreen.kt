@@ -116,7 +116,8 @@ fun AndroidHomeScreen(
                     onMenuClick = { scope.launch { drawerState.open() } },
                     modifier = Modifier
                         .fillMaxSize()
-                        .windowInsetsPadding(WindowInsets.systemBars)
+                        .statusBarsPadding()
+                        .background(MaterialTheme.colorScheme.background)
                 )
             }
             "Profiles" -> {

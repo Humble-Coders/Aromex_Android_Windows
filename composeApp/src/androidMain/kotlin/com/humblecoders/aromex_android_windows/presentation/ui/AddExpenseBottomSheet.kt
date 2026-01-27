@@ -1,7 +1,13 @@
 package com.humblecoders.aromex_android_windows.presentation.ui
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -9,8 +15,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -18,7 +27,12 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -44,6 +58,7 @@ fun ExpenseAmountRowAndroid(
     isDarkTheme: Boolean,
     onValueChange: (String) -> Unit
 ) {
+    val isDark = isSystemInDarkTheme()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -65,8 +80,12 @@ fun ExpenseAmountRowAndroid(
             onValueChange = { input ->
                 onValueChange(input.filter { it.isDigit() || it == '.' })
             },
-            modifier = Modifier.widthIn(min = 120.dp),
+            modifier = Modifier
+                .widthIn(min = 120.dp)
+                .defaultMinSize(minHeight = 64.dp),
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            shape = RoundedCornerShape(12.dp),
             leadingIcon = {
                 Text(
                     text = "$",
@@ -76,12 +95,22 @@ fun ExpenseAmountRowAndroid(
                 )
             },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                focusedTextColor = if (isDarkTheme) Color.White else Color.Black,
-                unfocusedTextColor = if (isDarkTheme) Color.White else Color.Black
+                focusedContainerColor = if (isDark)
+                    MaterialTheme.colorScheme.surfaceVariant
+                else
+                    MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = if (isDark)
+                    MaterialTheme.colorScheme.surfaceVariant
+                else
+                    MaterialTheme.colorScheme.surface,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = if (isDark)
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                else
+                    MaterialTheme.colorScheme.onSurfaceVariant,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                cursorColor = if (isDark) Color.White else Color.Black
             )
         )
     }
@@ -110,17 +139,31 @@ fun AddExpenseBottomSheet(
     var cardAmount by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     
+    // Focus requesters for keyboard navigation
+    val categoryFocusRequester = remember { FocusRequester() }
+    val totalAmountFocusRequester = remember { FocusRequester() }
+    
+    // Discard dialog state
+    var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
+    
+    // Check if any fields have content
+    val hasChanges = selectedCategory != null || totalAmount.isNotBlank() || 
+            cashAmount.isNotBlank() || bankAmount.isNotBlank() || 
+            cardAmount.isNotBlank() || notes.isNotBlank()
+    
     // Category field position tracking
-    val density = LocalDensity.current
     var boxPosition by remember { mutableStateOf(Offset.Zero) }
     var categoryFieldPosition by remember { mutableStateOf(Offset.Zero) }
     var categoryFieldHeight by remember { mutableStateOf(0.dp) }
     var categoryFieldWidth by remember { mutableStateOf(0.dp) }
     
-    // Fetch categories when bottom sheet opens
+    // Fetch categories when bottom sheet opens and focus category field
     LaunchedEffect(Unit) {
         // Always try to fetch when bottom sheet opens (will skip if already loading or loaded)
         viewModel.fetchCategories()
+        // Focus category field when screen opens
+        kotlinx.coroutines.delay(100)
+        categoryFocusRequester.requestFocus()
     }
     
     // Also fetch when dropdown opens if categories are empty
@@ -160,292 +203,86 @@ fun AddExpenseBottomSheet(
     val isPaymentSplitValid = matchesTotal
     val canSave = isCategoryValid && isTotalAmountValid && isPaymentSplitValid
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .onGloballyPositioned { coordinates ->
-                    boxPosition = coordinates.positionInRoot()
-                }
-        ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp)
-                .windowInsetsPadding(WindowInsets.ime),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            // Header
+    // Root position tracking for dropdown
+    var rootPosition by remember { mutableStateOf(Offset.Zero) }
+    
+    // Scroll state for tracking scroll position
+    val scrollState = rememberScrollState()
+    
+    // Track scroll position to show/hide top bar - show when scrolled past initial header
+    val showTopBar by remember {
+        derivedStateOf {
+            scrollState.value > 80 // Show top bar when scrolled more than 80 pixels
+        }
+    }
+    
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        topBar = {
+            // Top Bar with Cancel, Title, and Save - Title animates on scroll
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.RemoveCircle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Text(
-                        text = "Add Expense",
-                        fontSize = 20.sp,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1
-                    )
-                }
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Category
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Category",
-                    fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = " *",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                val selected = selectedCategory // Store in local variable for smart cast
-                val displayValue = if (selected != null) {
-                    selected.category
-                } else {
-                    categorySearchQuery
-                }
-                Box(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                OutlinedTextField(
-                        value = displayValue,
-                        onValueChange = { newValue: String ->
-                            categorySearchQuery = newValue
-                            // Clear selection if user types something different
-                            if (selected != null && newValue != selected.category) {
-                                selectedCategory = null
-                            }
-                            categoryExpanded = true
-                        },
-                    placeholder = {
-                            if (selected == null) {
-                        Text(
-                                    text = "Search category...",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 14.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .onGloballyPositioned { coordinates ->
-                                categoryFieldPosition = coordinates.positionInRoot()
-                                categoryFieldHeight = with(density) { coordinates.size.height.toDp() }
-                                categoryFieldWidth = with(density) { coordinates.size.width.toDp() }
-                            }
-                            .onFocusChanged { focusState ->
-                                // Open dropdown when field gains focus (clicked)
-                                if (focusState.isFocused && !categoryExpanded) {
-                                    categoryExpanded = true
-                                }
-                            },
-                        singleLine = true,
-                        textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
-                        shape = RoundedCornerShape(10.dp),
-                        trailingIcon = {
-                            IconButton(onClick = { categoryExpanded = !categoryExpanded }) {
-                                Icon(
-                                    imageVector = if (categoryExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                                    contentDescription = if (categoryExpanded) "Hide" else "Show"
-                                )
-                            }
-                    },
-                    colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite(),
-                            unfocusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite(),
-                        focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            focusedTextColor = if (isDarkTheme) Color.White else Color.Black,
-                            unfocusedTextColor = if (isDarkTheme) Color.White else Color.Black,
-                            focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    )
-                    // Overlay content matching dropdown layout exactly - only show when category is selected
-                    if (selected != null) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .align(Alignment.Center)
-                                .padding(start = 16.dp, end = 48.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            // Category name text (no role pill for categories)
-                            Text(
-                                text = selected.category,
-                                fontSize = 14.sp,
-                                color = if (isDarkTheme) Color.White else Color.Black,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false)
-                            )
+                // Cancel Button - Always visible
+                TextButton(
+                    onClick = {
+                        if (hasChanges) {
+                            showDiscardDialog = true
+                        } else {
+                            onDismiss()
                         }
                     }
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Select a category for this expense",
-                    fontSize = 12.sp,
-                    color = if (isDarkTheme) Color(0xFFB0B0B0) else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 4.dp),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            // Total Amount
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Total Amount *",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                OutlinedTextField(
-                    value = totalAmount,
-                    onValueChange = { input ->
-                        totalAmount = input.filter { it.isDigit() || it == '.' }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    leadingIcon = {
-                        Text(
-                            text = "$",
-                            fontSize = 16.sp,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-            }
-
-            // Payment Split
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Payment Split *",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = if (matchesTotal) "Matches total" else "Does not match total",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (matchesTotal) getAromexSuccessColor(isDarkTheme) else MaterialTheme.colorScheme.error
+                        text = "Cancel",
+                        color = if (isSystemInDarkTheme()) {
+                            Color(0xFF6EA8FF)
+                        } else {
+                            Color(0xFF2563EB)
+                        },
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
                     )
                 }
 
-                ExpenseAmountRowAndroid(
-                    label = "Cash",
-                    dotColor = getAromexSuccessColor(isDarkTheme),
-                    value = cashAmount,
-                    isDarkTheme = isDarkTheme,
-                    onValueChange = { cashAmount = it }
-                )
-                ExpenseAmountRowAndroid(
-                    label = "Bank",
-                    dotColor = Color(0xFF2196F3),
-                    value = bankAmount,
-                    isDarkTheme = isDarkTheme,
-                    onValueChange = { bankAmount = it }
-                )
-                ExpenseAmountRowAndroid(
-                    label = "Credit Card",
-                    dotColor = Color(0xFF9C27B0),
-                    value = cardAmount,
-                    isDarkTheme = isDarkTheme,
-                    onValueChange = { cardAmount = it }
-                )
-            }
-
-            // Notes
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Notes (Optional)",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                OutlinedTextField(
-                    value = notes,
-                    onValueChange = { notes = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 80.dp),
-                    placeholder = {
-                        Text(
-                            text = "Add notes about this expense",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-            }
-
-            // Actions
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f)
+                // Title - Animated visibility on scroll
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text("Cancel")
+                    @Suppress("RemoveRedundantQualifierName")
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = showTopBar,
+                        enter = slideInVertically(
+                            initialOffsetY = { -it },
+                            animationSpec = tween(300)
+                        ) + fadeIn(
+                            animationSpec = tween(300)
+                        ),
+                        exit = slideOutVertically(
+                            targetOffsetY = { -it },
+                            animationSpec = tween(300)
+                        ) + fadeOut(
+                            animationSpec = tween(300)
+                        )
+                    ) {
+                        Text(
+                            text = "Add Expense",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
-                Button(
+
+                // Save Button - Always visible
+                TextButton(
                     onClick = {
                         if (canSave && !isSaving && selectedCategory != null) {
                             viewModel.saveExpenseTransaction(
@@ -461,76 +298,498 @@ fun AddExpenseBottomSheet(
                             )
                         }
                     },
-                    enabled = canSave && !isSaving,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = AromexColors.ButtonBlue()
-                    )
+                    enabled = canSave && !isSaving
                 ) {
                     if (isSaving) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
-                            color = Color.White,
+                            color = if (isSystemInDarkTheme()) {
+                                Color(0xFF6EA8FF)
+                            } else {
+                                Color(0xFF2563EB)
+                            },
                             strokeWidth = 2.dp
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Saving...",
-                            color = Color.White
-                        )
                     } else {
+                        Text(
+                            text = "Save",
+                            color = if (canSave) {
+                                if (isSystemInDarkTheme()) {
+                                    Color(0xFF6EA8FF)
+                                } else {
+                                    Color(0xFF2563EB)
+                                }
+                            } else {
+                                if (isSystemInDarkTheme()) {
+                                    Color(0xFF9AA4B2).copy(alpha = 0.6f)
+                                } else {
+                                    Color(0xFF94A3B8)
+                                }
+                            },
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+            // Divider - Always visible
+            Divider(
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+            )
+        }
+    ) { paddingValues ->
+        val density = LocalDensity.current
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp)
+                    .windowInsetsPadding(WindowInsets.ime)
+                    .verticalScroll(scrollState)
+                    .onGloballyPositioned { coordinates ->
+                        rootPosition = coordinates.positionInRoot()
+                        boxPosition = coordinates.positionInRoot()
+                    }
+            ) {
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // Title and Subtitle
+                Text(
+                    text = "Add Expense",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Text(
+                    text = "Record a new expense transaction",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 24.dp)
+                )
+
+                // Category Field
+                Column(Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Category",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = " *",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    val selected = selectedCategory
+                    val displayValue = (selected?.category ?: categorySearchQuery).trim()
+                    val isDark = isSystemInDarkTheme()
+                    val density = LocalDensity.current
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onGloballyPositioned { coordinates ->
+                                categoryFieldPosition = coordinates.positionInRoot()
+                                categoryFieldHeight = with(density) { coordinates.size.height.toDp() }
+                                categoryFieldWidth = with(density) { coordinates.size.width.toDp() }
+                            }
+                    ) {
+                        OutlinedTextField(
+                            value = displayValue,
+                            onValueChange = { newValue: String ->
+                                categorySearchQuery = newValue
+                                if (selected != null && newValue != selected.category) {
+                                    selectedCategory = null
+                                }
+                                categoryExpanded = true
+                            },
+                            placeholder = {
+                                if (selected == null) {
+                                    Text(
+                                        text = "Choose an option",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 14.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .defaultMinSize(minHeight = 64.dp)
+                                .focusRequester(categoryFocusRequester)
+                                .onFocusChanged { focusState ->
+                                    if (focusState.isFocused && !categoryExpanded) {
+                                        categoryExpanded = true
+                                    }
+                                },
+                            singleLine = true,
+                            textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                            keyboardActions = KeyboardActions(
+                                onNext = { totalAmountFocusRequester.requestFocus() }
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            trailingIcon = {
+                                IconButton(onClick = { categoryExpanded = !categoryExpanded }) {
+                                    Icon(
+                                        imageVector = if (categoryExpanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                                        contentDescription = if (categoryExpanded) "Hide" else "Show"
+                                    )
+                                }
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = if (isDark) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = if (isDark) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                cursorColor = if (isDark) Color.White else Color.Black
+                            )
+                        )
+                    }
+
+                    // Category Dropdown - Inside Column flow to push content down
+                    if (categoryExpanded) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val density = LocalDensity.current
+                        var dropdownContainerPosition by remember { mutableStateOf(Offset.Zero) }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onGloballyPositioned { coordinates ->
+                                    dropdownContainerPosition = coordinates.positionInRoot()
+                                }
+                        ) {
+                            val adjustedFieldPosition = Offset(
+                                x = dropdownContainerPosition.x,
+                                y = dropdownContainerPosition.y - with(density) { categoryFieldHeight.toPx() } - with(density) { 4.dp.toPx() }
+                            )
+                            SearchableDropdown(
+                                items = categories,
+                                selectedItem = selectedCategory,
+                                searchQuery = categorySearchQuery,
+                                expanded = categoryExpanded,
+                                onItemSelected = { category ->
+                                    selectedCategory = category
+                                    categorySearchQuery = category.category.trim()
+                                    categoryExpanded = false
+                                    // Move focus to total amount field after selection
+                                    totalAmountFocusRequester.requestFocus()
+                                },
+                                onSearchQueryChange = { newValue ->
+                                    categorySearchQuery = newValue
+                                    if (selectedCategory != null && newValue != selectedCategory?.category) {
+                                        selectedCategory = null
+                                    }
+                                },
+                                onExpandedChange = { expanded ->
+                                    categoryExpanded = expanded
+                                    if (expanded && categories.isEmpty() && !isLoadingCategories) {
+                                        viewModel.fetchCategories()
+                                    }
+                                },
+                                onAddNew = { searchQuery, selectItem ->
+                                    viewModel.addCategory(searchQuery) { createdCategory ->
+                                        selectItem(createdCategory)
+                                    }
+                                    categoryExpanded = false
+                                },
+                                fieldPosition = adjustedFieldPosition,
+                                fieldHeight = categoryFieldHeight,
+                                fieldWidth = categoryFieldWidth,
+                                rootPosition = dropdownContainerPosition,
+                                density = density,
+                                isDarkTheme = isDarkTheme,
+                                typeFilter = null,
+                                placeholder = "Choose an option",
+                                getItemDisplayName = { it.category },
+                                getItemId = { it.id },
+                                getItemType = null,
+                                showRolePill = false
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Total Amount
+                Column(Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Total Amount",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = " *",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = totalAmount,
+                        onValueChange = { input ->
+                            totalAmount = input.filter { it.isDigit() || it == '.' }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .defaultMinSize(minHeight = 64.dp)
+                            .focusRequester(totalAmountFocusRequester),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Next
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onNext = { /* Can move to notes or stay here */ }
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        leadingIcon = {
+                            Text(
+                                text = "$",
+                                fontSize = 16.sp,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        placeholder = {
+                            Text(
+                                text = "0.00",
+                                color = if (isSystemInDarkTheme())
+                                    Color.White.copy(alpha = 0.6f)
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = if (isSystemInDarkTheme())
+                                MaterialTheme.colorScheme.surfaceVariant
+                            else
+                                MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = if (isSystemInDarkTheme())
+                                MaterialTheme.colorScheme.surfaceVariant
+                            else
+                                MaterialTheme.colorScheme.surface,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = if (isSystemInDarkTheme())
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            cursorColor = if (isSystemInDarkTheme()) Color.White else Color.Black
+                        )
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Payment Split
+                Column(Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Payment Split",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = " *",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        // Indicator on the right side
+                        if (total > 0) {
+                            val difference = splitTotal - total
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                if (matchesTotal) {
+                                    // Matches total - show green checkmark and text
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = getAromexSuccessColor(isDarkTheme),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = "Matches total",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = getAromexSuccessColor(isDarkTheme)
+                                    )
+                                } else if (difference > 0) {
+                                    // Over by amount - show error text
+                                    Text(
+                                        text = "Over by: $${String.format("%.2f", difference)}",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                } else {
+                                    // Remaining amount - show orange text
+                                    Text(
+                                        text = "Remaining: $${String.format("%.2f", kotlin.math.abs(difference))}",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color(0xFFFF9800)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    ExpenseAmountRowAndroid(
+                        label = "Cash",
+                        dotColor = getAromexSuccessColor(isDarkTheme),
+                        value = cashAmount,
+                        isDarkTheme = isDarkTheme,
+                        onValueChange = { cashAmount = it }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    ExpenseAmountRowAndroid(
+                        label = "Bank",
+                        dotColor = Color(0xFF2196F3),
+                        value = bankAmount,
+                        isDarkTheme = isDarkTheme,
+                        onValueChange = { bankAmount = it }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    ExpenseAmountRowAndroid(
+                        label = "Credit Card",
+                        dotColor = Color(0xFF9C27B0),
+                        value = cardAmount,
+                        isDarkTheme = isDarkTheme,
+                        onValueChange = { cardAmount = it }
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Notes
+                Column(Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Save Expense",
-                        color = Color.White
+                        text = "Notes (Optional)",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = notes,
+                        onValueChange = { notes = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 80.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        placeholder = {
+                            Text(
+                                text = "Add notes about this expense",
+                                color = if (isSystemInDarkTheme())
+                                    Color.White.copy(alpha = 0.6f)
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = if (isSystemInDarkTheme())
+                                MaterialTheme.colorScheme.surfaceVariant
+                            else
+                                MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = if (isSystemInDarkTheme())
+                                MaterialTheme.colorScheme.surfaceVariant
+                            else
+                                MaterialTheme.colorScheme.surface,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = if (isSystemInDarkTheme())
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            cursorColor = if (isSystemInDarkTheme()) Color.White else Color.Black
+                        )
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
+    
+    // Discard changes dialog
+    if (showDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = {
+                Text(
+                    text = "Discard Changes?",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    "Are you sure you want to discard your changes?",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDiscardDialog = false
+                        onDismiss()
+                    }
+                ) {
+                    Text(
+                        text = "Discard",
+                        color = if (isSystemInDarkTheme()) {
+                            Color(0xFFFF8A80)
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        }
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardDialog = false }) {
+                    Text(
+                        text = "Cancel",
+                        color = if (isSystemInDarkTheme()) {
+                            Color(0xFF6EA8FF)
+                        } else {
+                            Color(0xFF2563EB)
+                        }
                     )
                 }
             }
-        }
-            
-            // Category Dropdown - Using reusable composable (outside Column so it can overflow)
-            SearchableDropdown(
-                items = categories,
-                selectedItem = selectedCategory,
-                searchQuery = categorySearchQuery,
-                expanded = categoryExpanded,
-                onItemSelected = { category ->
-                    selectedCategory = category
-                    categorySearchQuery = category.category
-                    categoryExpanded = false
-                },
-                onSearchQueryChange = { newValue ->
-                    categorySearchQuery = newValue
-                    if (selectedCategory != null && newValue != selectedCategory?.category) {
-                        selectedCategory = null
-                    }
-                },
-                onExpandedChange = { expanded ->
-                    categoryExpanded = expanded
-                    // Fetch categories when dropdown opens if list is empty
-                    if (expanded && categories.isEmpty() && !isLoadingCategories) {
-                        viewModel.fetchCategories()
-                    }
-                },
-                onAddNew = { searchQuery, selectItem ->
-                    viewModel.addCategory(searchQuery) { createdCategory ->
-                        selectItem(createdCategory)
-                    }
-                    categoryExpanded = false
-                },
-                fieldPosition = categoryFieldPosition,
-                fieldHeight = categoryFieldHeight,
-                fieldWidth = categoryFieldWidth,
-                rootPosition = boxPosition,
-                density = density,
-                isDarkTheme = isDarkTheme,
-                typeFilter = null,
-                placeholder = "Search category...",
-                getItemDisplayName = { it.category },
-                getItemId = { it.id },
-                getItemType = null,
-                showRolePill = false
-            )
-        }
+        )
     }
     
     // Expense Save Confirmation Dialog
@@ -590,5 +849,4 @@ fun AddExpenseBottomSheet(
 }
         }
     }
-}
 }

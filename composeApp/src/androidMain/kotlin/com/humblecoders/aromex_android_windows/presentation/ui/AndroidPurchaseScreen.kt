@@ -6,7 +6,10 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -257,7 +260,11 @@ fun AndroidPurchaseScreen(
 ) {
     val isDarkTheme = isSystemInDarkTheme()
     var orderNumber by rememberSaveable { mutableStateOf("ORD-85") }
-    var date by rememberSaveable { mutableStateOf("1 January 2026") }
+    
+    // Initialize date to today
+    val today = LocalDate.now()
+    val dateFormatter = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ENGLISH)
+    var date by rememberSaveable { mutableStateOf(today.format(dateFormatter)) }
     var supplierExpanded by rememberSaveable { mutableStateOf(false) }
     var selectedSupplier by rememberSaveable { mutableStateOf<Entity?>(null) }
     var supplierSearchQuery by rememberSaveable { mutableStateOf("") }
@@ -265,10 +272,10 @@ fun AndroidPurchaseScreen(
     // Get entities from viewmodel (using shared EntityRepository)
     val entities by viewModel.entities.collectAsState()
     
-    // Calendar popup state
+    // Calendar popup state - Initialize to today
     var calendarExpanded by rememberSaveable { mutableStateOf(false) }
-    var selectedDate by rememberSaveable(stateSaver = LocalDateSaver) { mutableStateOf(LocalDate.of(2026, 1, 1)) }
-    var currentMonth by rememberSaveable(stateSaver = YearMonthSaver) { mutableStateOf(YearMonth.of(2025, 12)) }
+    var selectedDate by rememberSaveable(stateSaver = LocalDateSaver) { mutableStateOf(today) }
+    var currentMonth by rememberSaveable(stateSaver = YearMonthSaver) { mutableStateOf(YearMonth.from(today)) }
     
     // Add Product Sheet state
     var showAddProductSheet by rememberSaveable { mutableStateOf(false) }
@@ -334,57 +341,61 @@ fun AndroidPurchaseScreen(
                 rootPosition = coordinates.positionInRoot()
             }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-        // Top Bar with Menu, Title, and Profile
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onMenuClick) {
-                Icon(
-                    imageVector = Icons.Default.Menu,
-                    contentDescription = "Menu",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            Text(
-                text = "Purchase",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            IconButton(onClick = { /* Profile action - no logic */ }) {
-                Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Profile",
-                    tint = MaterialTheme.colorScheme.onSurface,
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = {
+                // Top Bar with Menu, Title, and Profile - matching home screen
+                Row(
                     modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.background)
-                )
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onMenuClick) {
+                        Icon(
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = "Menu",
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Text(
+                        text = "Purchase",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    IconButton(onClick = { /* Profile action - no logic */ }) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Profile",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.background)
+                        )
+                    }
+                }
             }
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            // Form Card with White Background
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Form Card with White Background
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(),
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite()
@@ -403,7 +414,7 @@ fun AndroidPurchaseScreen(
                                 text = "Order number",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onSurface,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -415,20 +426,33 @@ fun AndroidPurchaseScreen(
                             )
                         }
                         Spacer(modifier = Modifier.height(6.dp))
+                        val isDark = isSystemInDarkTheme()
                         OutlinedTextField(
                             value = orderNumber,
                             onValueChange = { orderNumber = it },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .defaultMinSize(minHeight = 64.dp),
                             singleLine = true,
                             textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                focusedTextColor = if (isDarkTheme) Color.White else Color.Black,
-                                unfocusedTextColor = if (isDarkTheme) Color.White else Color.Black
+                                focusedContainerColor = if (isDark)
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                else
+                                    MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = if (isDark)
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                else
+                                    MaterialTheme.colorScheme.surface,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = if (isDark)
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                cursorColor = if (isDark) Color.White else Color.Black
                             )
                         )
                         Spacer(modifier = Modifier.height(4.dp))
@@ -449,7 +473,7 @@ fun AndroidPurchaseScreen(
                                 text = "Date",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onSurface,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -468,18 +492,20 @@ fun AndroidPurchaseScreen(
                             )
                         }
                         Spacer(modifier = Modifier.height(6.dp))
+                        val isDark = isSystemInDarkTheme()
                         OutlinedTextField(
                             value = date,
                             onValueChange = { date = it },
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .defaultMinSize(minHeight = 64.dp)
                                 .onGloballyPositioned { coordinates ->
                                     dateFieldPosition = coordinates.positionInRoot()
                                     dateFieldHeight = with(density) { coordinates.size.height.toDp() }
                                 },
                             singleLine = true,
                             textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
-                            shape = RoundedCornerShape(10.dp),
+                            shape = RoundedCornerShape(12.dp),
                             trailingIcon = {
                                 Icon(
                                     imageVector = Icons.Default.CalendarToday,
@@ -489,12 +515,22 @@ fun AndroidPurchaseScreen(
                                 )
                             },
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                focusedTextColor = if (isDarkTheme) Color.White else Color.Black,
-                                unfocusedTextColor = if (isDarkTheme) Color.White else Color.Black
+                                focusedContainerColor = if (isDark)
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                else
+                                    MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = if (isDark)
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                else
+                                    MaterialTheme.colorScheme.surface,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = if (isDark)
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                cursorColor = if (isDark) Color.White else Color.Black
                             )
                         )
                         Spacer(modifier = Modifier.height(4.dp))
@@ -515,7 +551,7 @@ fun AndroidPurchaseScreen(
                                 text = "Supplier",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onSurface,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -529,6 +565,7 @@ fun AndroidPurchaseScreen(
                         Spacer(modifier = Modifier.height(6.dp))
                         val selected = selectedSupplier // Store in local variable for smart cast
                         val displayValue = selected?.name ?: supplierSearchQuery
+                        val isDark = isSystemInDarkTheme()
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -552,7 +589,10 @@ fun AndroidPurchaseScreen(
                                     if (selected == null) {
                                         Text(
                                             text = "Search supplier...",
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = if (isDark)
+                                                Color.White.copy(alpha = 0.6f)
+                                            else
+                                                MaterialTheme.colorScheme.onSurfaceVariant,
                                             fontSize = 14.sp,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
@@ -561,6 +601,7 @@ fun AndroidPurchaseScreen(
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .defaultMinSize(minHeight = 64.dp)
                                     .onFocusChanged { focusState ->
                                         // Open dropdown when field gains focus (clicked)
                                         if (focusState.isFocused && !supplierExpanded) {
@@ -569,7 +610,7 @@ fun AndroidPurchaseScreen(
                                     },
                                 singleLine = true,
                                 textStyle = LocalTextStyle.current.copy(fontSize = 14.sp),
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 // Use leadingIcon as spacer when selected
                                 leadingIcon = if (selected != null) {
                                     {
@@ -585,14 +626,30 @@ fun AndroidPurchaseScreen(
                                     }
                                 },
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite(),
-                                    unfocusedContainerColor = if (isDarkTheme) MaterialTheme.colorScheme.surface else AromexColors.ForegroundWhite(),
-                                    focusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    focusedTextColor = if (isDarkTheme) Color.White else Color.Black,
-                                    unfocusedTextColor = if (isDarkTheme) Color.White else Color.Black,
-                                    focusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    focusedContainerColor = if (isDark)
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    else
+                                        MaterialTheme.colorScheme.surface,
+                                    unfocusedContainerColor = if (isDark)
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    else
+                                        MaterialTheme.colorScheme.surface,
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = if (isDark)
+                                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant,
+                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    focusedPlaceholderColor = if (isDark)
+                                        Color.White.copy(alpha = 0.6f)
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unfocusedPlaceholderColor = if (isDark)
+                                        Color.White.copy(alpha = 0.6f)
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant,
+                                    cursorColor = if (isDark) Color.White else Color.Black
                                 )
                             )
                             // Overlay content matching dropdown layout exactly - only show when supplier is selected
@@ -661,6 +718,277 @@ fun AndroidPurchaseScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+                        
+                        // Supplier Dropdown - Inside the Card
+                        AnimatedVisibility(
+                            visible = supplierExpanded,
+                            enter = fadeIn(tween(200)) + slideInVertically(
+                                initialOffsetY = { -it / 2 },
+                                animationSpec = tween(300)
+                            ),
+                            exit = fadeOut(tween(200)) + slideOutVertically(
+                                targetOffsetY = { -it / 2 },
+                                animationSpec = tween(300)
+                            )
+                        ) {
+                            // Filter and sort entities
+                            val sortedEntities: List<Entity> = remember(entities) {
+                                entities.filter { it.type == EntityType.SUPPLIER }.sortedBy { it.name } +
+                                entities.filter { it.type != EntityType.SUPPLIER }.sortedBy { it.name }
+                            }
+                            
+                            val hasExactMatch = remember(sortedEntities, supplierSearchQuery) {
+                                if (supplierSearchQuery.isBlank()) {
+                                    false
+                                } else {
+                                    sortedEntities.any { 
+                                        it.name.equals(supplierSearchQuery, ignoreCase = true)
+                                    }
+                                }
+                            }
+                            
+                            val filteredEntities: List<Entity> = remember(sortedEntities, supplierSearchQuery, selectedSupplier, supplierExpanded) {
+                                val currentSelected = selectedSupplier // Local variable for smart cast
+                                val query = supplierSearchQuery.lowercase()
+                                val filtered: List<Entity> = if (supplierSearchQuery.isBlank()) {
+                                    sortedEntities
+                                } else {
+                                    if (supplierExpanded && currentSelected != null &&
+                                        supplierSearchQuery.equals(currentSelected.name, ignoreCase = true)) {
+                                        sortedEntities
+                                    } else {
+                                        sortedEntities.filter { 
+                                            it.name.lowercase().contains(query)
+                                        }
+                                    }
+                                }
+                                
+                                if (currentSelected != null) {
+                                    val selectedInList = filtered.find { it.id == currentSelected.id }
+                                    if (selectedInList != null) {
+                                        val withoutSelected = filtered.filter { it.id != currentSelected.id }
+                                        listOf(currentSelected) + withoutSelected
+                                    } else {
+                                        filtered
+                                    }
+                                } else {
+                                    filtered
+                                }
+                            }
+                            
+                            Spacer(modifier = Modifier.height(8.dp))
+                            
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 200.dp),
+                                shape = RoundedCornerShape(4.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                            ) {
+                                if (filteredEntities.isEmpty()) {
+                                    if (supplierSearchQuery.isNotBlank() && !hasExactMatch) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable(
+                                                    interactionSource = remember { MutableInteractionSource() },
+                                                    indication = null
+                                                ) {
+                                                    addEntityInitialName = supplierSearchQuery
+                                                    addEntityInitialType = EntityType.SUPPLIER
+                                                    showAddEntityDialog = true
+                                                    supplierExpanded = false
+                                                }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Surface(
+                                                    shape = CircleShape,
+                                                    color = Color(0xFF4CAF50),
+                                                    modifier = Modifier.size(24.dp)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier.fillMaxSize(),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Add,
+                                                            contentDescription = "Add new",
+                                                            tint = Color.White,
+                                                            modifier = Modifier.size(16.dp)
+                                                        )
+                                                    }
+                                                }
+                                                Text(
+                                                    text = "Add '$supplierSearchQuery'",
+                                                    fontSize = 14.sp,
+                                                    color = Color(0xFF4CAF50),
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = "No items found",
+                                                fontSize = 14.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        if (!hasExactMatch && supplierSearchQuery.isNotBlank()) {
+                                            item {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clickable(
+                                                            interactionSource = remember { MutableInteractionSource() },
+                                                            indication = null
+                                                        ) {
+                                                            addEntityInitialName = supplierSearchQuery
+                                                            addEntityInitialType = EntityType.SUPPLIER
+                                                            showAddEntityDialog = true
+                                                            supplierExpanded = false
+                                                        }
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                    ) {
+                                                        Surface(
+                                                            shape = CircleShape,
+                                                            color = Color(0xFF4CAF50),
+                                                            modifier = Modifier.size(24.dp)
+                                                        ) {
+                                                            Box(
+                                                                modifier = Modifier.fillMaxSize(),
+                                                                contentAlignment = Alignment.Center
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = Icons.Default.Add,
+                                                                    contentDescription = "Add new",
+                                                                    tint = Color.White,
+                                                                    modifier = Modifier.size(16.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                        Text(
+                                                            text = "Add '$supplierSearchQuery'",
+                                                            fontSize = 14.sp,
+                                                            color = Color(0xFF4CAF50),
+                                                            fontWeight = FontWeight.Medium
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        items(filteredEntities) { entity ->
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable(
+                                                        interactionSource = remember { MutableInteractionSource() },
+                                                        indication = null
+                                                    ) {
+                                                        selectedSupplier = entity
+                                                        supplierSearchQuery = entity.name
+                                                        supplierExpanded = false
+                                                    }
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(start = 16.dp, end = 48.dp, top = 12.dp, bottom = 12.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    Surface(
+                                                        shape = RoundedCornerShape(12.dp),
+                                                        color = when (entity.type) {
+                                                            EntityType.CUSTOMER -> Color(0xFF2196F3).copy(alpha = 0.2f)
+                                                            EntityType.SUPPLIER -> Color(0xFF4CAF50).copy(alpha = 0.2f)
+                                                            EntityType.MIDDLEMAN -> Color(0xFFFF9800).copy(alpha = 0.2f)
+                                                        },
+                                                        modifier = Modifier
+                                                            .width(85.dp)
+                                                            .height(24.dp)
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier.fillMaxSize(),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Text(
+                                                                text = when (entity.type) {
+                                                                    EntityType.CUSTOMER -> "Customer"
+                                                                    EntityType.SUPPLIER -> "Supplier"
+                                                                    EntityType.MIDDLEMAN -> "Middleman"
+                                                                },
+                                                                fontSize = 11.sp,
+                                                                fontWeight = FontWeight.Medium,
+                                                                color = when (entity.type) {
+                                                                    EntityType.CUSTOMER -> Color(0xFF1976D2)
+                                                                    EntityType.SUPPLIER -> Color(0xFF388E3C)
+                                                                    EntityType.MIDDLEMAN -> Color(0xFFF57C00)
+                                                                },
+                                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis
+                                                            )
+                                                        }
+                                                    }
+                                                    Text(
+                                                        text = entity.name,
+                                                        fontSize = 14.sp,
+                                                        color = if (isDarkTheme) Color.White else MaterialTheme.colorScheme.onSurface,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        modifier = Modifier.weight(1f, fill = false)
+                                                    )
+                                                    if (selectedSupplier != null && selectedSupplier!!.id == entity.id) {
+                                                        Box(
+                                                            modifier = Modifier.size(24.dp),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Surface(
+                                                                shape = CircleShape,
+                                                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                                                modifier = Modifier.fillMaxSize()
+                                                            ) {}
+                                                            Icon(
+                                                                imageVector = Icons.Default.Check,
+                                                                contentDescription = "Selected",
+                                                                tint = MaterialTheme.colorScheme.primary,
+                                                                modifier = Modifier.size(16.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -747,76 +1075,30 @@ fun AndroidPurchaseScreen(
                     }
                 }
             }
-        }
+            }
         }
         
-        // Supplier Dropdown - Using reusable composable (outside Column so it can overflow)
-        SearchableDropdown(
-            items = entities,
-            selectedItem = selectedSupplier,
-            searchQuery = supplierSearchQuery,
-            expanded = supplierExpanded,
-            onItemSelected = { entity ->
-                selectedSupplier = entity
-                supplierSearchQuery = entity.name
-                supplierExpanded = false
-            },
-            onSearchQueryChange = { newValue ->
-                supplierSearchQuery = newValue
-                if (selectedSupplier != null && newValue != selectedSupplier?.name) {
-                    selectedSupplier = null
-                }
-            },
-            onExpandedChange = { expanded ->
-                supplierExpanded = expanded
-            },
-            onAddNew = { searchQuery, _ ->
-                addEntityInitialName = searchQuery
-                addEntityInitialType = EntityType.SUPPLIER
-                showAddEntityDialog = true
-                supplierExpanded = false
-                // Note: Entity selection happens after dialog saves
-            },
-            fieldPosition = supplierFieldPosition,
-            fieldHeight = textFieldHeight,
-            fieldWidth = supplierFieldWidth,
-            rootPosition = rootPosition,
-            density = density,
-            isDarkTheme = isDarkTheme,
-            typeFilter = EntityType.SUPPLIER,
-            placeholder = "Search supplier...",
-            getItemDisplayName = { it.name },
-            getItemId = { it.id },
-            getItemType = { it.type },
-            showRolePill = true
-        )
-        
-        // Calendar Popup - Outside the Column so it can overflow and overlap
+        // Calendar Popup - Centered with blur background
         AnimatedVisibility(
             visible = calendarExpanded,
-            enter = fadeIn(tween(200)) + scaleIn(
-                initialScale = 0.8f,
-                animationSpec = tween(300)
-            ) + slideInVertically(
-                initialOffsetY = { -it / 4 },
-                animationSpec = tween(300)
-            ),
-            exit = fadeOut(tween(200)) + scaleOut(
-                targetScale = 0.8f,
-                animationSpec = tween(300)
-            ) + slideOutVertically(
-                targetOffsetY = { -it / 4 },
-                animationSpec = tween(300)
-            )
+            enter = fadeIn(tween(200)),
+            exit = fadeOut(tween(200))
         ) {
-            // Calendar positioned below the date field
+            // Blur background overlay
             Box(
                 modifier = Modifier
-                    .offset(
-                        x = with(density) { (dateFieldPosition.x - rootPosition.x).toDp() },
-                        y = with(density) { (dateFieldPosition.y - rootPosition.y).toDp() } + dateFieldHeight
-                    )
-                    .zIndex(1000f)
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .clickable { calendarExpanded = false }
+                    .zIndex(999f)
+            )
+            
+            // Centered calendar
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(1000f),
+                contentAlignment = Alignment.Center
             ) {
                 CalendarPopup(
                     selectedDate = selectedDate,
